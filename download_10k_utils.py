@@ -10,9 +10,9 @@ from pandas import ExcelWriter, merge, read_excel
 from requests import get
 
 from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL, CIK_URL,
-                       MAP_SEC_PREFIX, MAP_SEC_REGEX, TICKER_CIK_CSV_FPATH,
+                       MAP_SEC_PREFIX, MAP_SEC_REGEX,
                        PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
-                       SEC_CIK_TXT_URL)
+                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH)
 
 
 def download_from_sec(ticker, cik, years, ticker_folder):
