@@ -21,10 +21,8 @@ def read_root():
 def download_10k(ticker):
 
     if not ticker_already_downloaded(ticker, MAIN_FOLDER):
-        tickers = [ticker]
-        download_and_parse(tickers, MAIN_FOLDER)
+        download_and_parse(ticker, MAIN_FOLDER)
 
     ticker_fpaths = get_fpaths_from_local_ticker(ticker, MAIN_FOLDER)
-    # send_files_to_user()
 
     return {"input": ticker_fpaths}
