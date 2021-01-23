@@ -4,37 +4,18 @@ import sys
 from collections import defaultdict
 from functools import reduce
 
-from pandas import read_excel, merge, ExcelWriter
-from requests import get
-from bs4 import BeautifulSoup
-
-from constants import (BASE_URL, BASE_EDGAR_URL, REGEX_PER_TARGET_SHEET,
-                       MAP_SEC_REGEX, MAP_SEC_PREFIX, _10K_FILING_TYPE,
-                       PROXY_STATEMENT_FILING_TYPE)
 import pandas as pd
+from bs4 import BeautifulSoup
+from pandas import ExcelWriter, merge, read_excel
+from requests import get
+
+from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL, CIK_URL,
+                       MAP_SEC_PREFIX, MAP_SEC_REGEX, TICKER_CIK_CSV_FPATH,
+                       PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
+                       SEC_CIK_TXT_URL)
 
 
-def get_cik(ticker):
-
-    url = "http://www.sec.gov/cgi-bin/browse-edgar?CIK={}&Find=Search&owner"
-    "=exclude&action=getcompany"
-    cik_regex = re.compile(r".*CIK=(\d{10}).*")
-
-    f = get(url.format(ticker), stream=True)
-    results = cik_regex.findall(f.text)
-    try:
-        cik = str(results[0])
-    except Exception:
-        raise Exception("Failed finding ticker")
-
-    return cik
-
-
-def download_from_sec(ticker, years, ticker_folder):
-
-    cik = get_cik(ticker)
-
-    # TODO: How to deal with half empty folders created
+def download_from_sec(ticker, cik, years, ticker_folder):
 
     _10k_url_per_year = get_10k_urls_per_year(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
@@ -48,10 +29,10 @@ def download_from_sec(ticker, years, ticker_folder):
 
         accession_numbers = [url.split("/")[-2]]
 
-        download_file_from_url(ticker, cik, accession_numbers, ".htm",
+        download_file_from_url(ticker, cik, year, accession_numbers, ".htm",
                                _10K_FILING_TYPE, year_folder)
         excel_fpath = download_file_from_url(
-            ticker, cik, accession_numbers, ".xlsx", _10K_FILING_TYPE,
+            ticker, cik, year, accession_numbers, ".xlsx", _10K_FILING_TYPE,
             year_folder)
         excel_fpaths.append(excel_fpath)
 
@@ -61,13 +42,13 @@ def download_from_sec(ticker, years, ticker_folder):
 
         accession_numbers = [url.split("/")[-2]]
 
-        download_file_from_url(ticker, cik, accession_numbers, ".htm",
+        download_file_from_url(ticker, cik, year, accession_numbers, ".htm",
                                PROXY_STATEMENT_FILING_TYPE, year_folder)
 
     return excel_fpaths
 
 
-def download_file_from_url(ticker, cik, accession_numbers,
+def download_file_from_url(ticker, cik, year, accession_numbers,
                            ext, file_type, local_fpath):
 
     if ext == ".xlsx":
@@ -82,7 +63,7 @@ def download_file_from_url(ticker, cik, accession_numbers,
     status_code = r.status_code
     if status_code == 200:
         fpath = os.path.join(
-            local_fpath, f"{ticker.upper()}_{prefix}{ext}")
+            local_fpath, f"{ticker.upper()}_{prefix}_{year}{ext}")
         with open(fpath, "wb") as output:
             output.write(r.content)
     else:
@@ -329,8 +310,32 @@ def create_merged_df(sheet_per_year, writer, format1):
         worksheet.set_column(idx, idx, max_len)
 
 
-def is_valid_ticker(ticker):
-    return True
+def get_ticker_cik(ticker):
+
+    ticker_lower = ticker.lower()
+    ticker_cik_df = pd.read_csv(TICKER_CIK_CSV_FPATH)
+    if not any(ticker_cik_df.ticker.str.contains(ticker_lower)):
+        ticker_cik_df = update_ticker_cik_df()
+        if not any(ticker_cik_df.ticker.str.contains(ticker_lower)):
+            return None
+
+    ciks = ticker_cik_df.loc[
+        ticker_cik_df["ticker"] == ticker_lower]["cik"].values
+    assert len(ciks) == 1, ciks
+    cik = str(ciks[0])
+
+    return cik
+
+
+def update_ticker_cik_df():
+
+    r = get(SEC_CIK_TXT_URL)
+    content = r.content.decode("utf-8")
+    rows = [line.split("\t") for line in content.splitlines()]
+    df = pd.DataFrame(rows, columns=["ticker", "cik"])
+    df.to_csv(TICKER_CIK_CSV_FPATH)
+
+    return df
 
 
 def get_missing_years(ticker_folder, years):

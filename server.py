@@ -1,12 +1,13 @@
 import os
+
 from fastapi import FastAPI
 
-from download_10k_utils import (download_from_sec, clean_excel,
-                                merge_excel_files_across_years,
-                                is_valid_ticker, get_missing_years,
-                                get_existing_merged_fpaths,
-                                get_fpaths_from_local_ticker)
 from constants import DEFAULT_FOLDER
+from download_10k_utils import (clean_excel, download_from_sec,
+                                get_existing_merged_fpaths,
+                                get_fpaths_from_local_ticker,
+                                get_missing_years, get_ticker_cik,
+                                merge_excel_files_across_years)
 
 app = FastAPI()
 
@@ -19,8 +20,9 @@ def read_root():
 @app.get("/ticker/{ticker}/years/{years}")
 def download_10k(ticker, years):
 
-    # TODO write function
-    assert is_valid_ticker(ticker)
+    cik = get_ticker_cik(ticker)
+    if cik is None:
+        return {"fpaths": "Wrong ticker"}
 
     ticker_folder = os.path.join(DEFAULT_FOLDER, ticker)
     os.makedirs(ticker_folder, exist_ok=True)
@@ -29,7 +31,7 @@ def download_10k(ticker, years):
 
     missing_years = get_missing_years(ticker_folder, years)
     if missing_years:
-        excel_fpaths_to_clean = download_from_sec(ticker, missing_years,
+        excel_fpaths_to_clean = download_from_sec(ticker, cik, missing_years,
                                                   ticker_folder)
         for excel_fpath in excel_fpaths_to_clean:
             clean_excel(excel_fpath)
@@ -40,6 +42,7 @@ def download_10k(ticker, years):
     else:
         merged_fpaths = merge_excel_files_across_years(ticker_folder, years)
 
+    # TODO: Don't send the raw xlsx file
     raw_fpaths_to_send = get_fpaths_from_local_ticker(ticker_folder, years)
     fpaths_to_send = raw_fpaths_to_send + merged_fpaths
 
