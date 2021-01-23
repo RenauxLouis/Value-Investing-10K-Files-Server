@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI
 
-from download_10k import download_and_parse
+from download_10k import main as download_and_parse
 from read_local_files import (ticker_already_downloaded,
                               get_fpaths_from_local_ticker)
 

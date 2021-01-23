@@ -11,8 +11,9 @@ def get_fpaths_from_local_ticker(ticker, folder):
     assert ticker in downloaded_tickers
 
     ticker_folder = os.path.join(folder, ticker)
-    ticker_files = os.listdir(ticker_folder)
-    ticker_fpaths = [
-        os.path.join(ticker_folder, file) for file in ticker_files]
+
+    ticker_fpaths = []
+    for root, _, fnames in os.walk(ticker_folder):
+        ticker_fpaths.extend([os.path.join(root, fname) for fname in fnames])
 
     return ticker_fpaths

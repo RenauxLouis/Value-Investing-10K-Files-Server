@@ -28,6 +28,7 @@ def download_10k(ticker, cik, priorto, years, dl_folder):
     if os.path.exists(ticker_folder):
         rmtree(ticker_folder)
 
+    # TODO: How to deal with half empty folders created
     os.makedirs(ticker_folder)
 
     filing_type = "10-K"
@@ -87,6 +88,8 @@ def download_10k(ticker, cik, priorto, years, dl_folder):
         "DEF 14A": "Proxy_Statement"
     }
     for year, urls in urls_per_year.items():
+        year_folder = os.path.join(ticker_folder, str(year))
+        os.makedirs(year_folder)
         for file_type, url in urls.items():
             file_type = file_type.replace("T", "")
             prefix = map_prefix[file_type]
@@ -96,10 +99,8 @@ def download_10k(ticker, cik, priorto, years, dl_folder):
 
             r = get(full_url[0])
             if r.status_code == 200:
-                os.makedirs(ticker_folder, exist_ok=True)
-                fpath = os.path.join(
-                    ticker_folder,
-                    f"{ticker.upper()}_{prefix}_{year}.{ext}")
+                fpath = os.path.join(year_folder,
+                                     f"{ticker.upper()}_{prefix}.{ext}")
                 fname_per_type_per_year[year][file_type] = fpath
                 with open(fpath, "wb") as output:
                     output.write(r.content)
@@ -359,14 +360,12 @@ def create_merged_df(sheet_per_year, writer, format1):
         worksheet.set_column(idx, idx, max_len)
 
 
-def remove_temp_files(fname_per_type_per_year_per_ticker):
-    for ticker, fname_per_type_per_year in (
-            fname_per_type_per_year_per_ticker.items()):
-        for year, fname_per_type in fname_per_type_per_year.items():
-            os.remove(fname_per_type["xlsx"])
+def remove_temp_files(fname_per_type_per_year):
+    for year, fname_per_type in fname_per_type_per_year.items():
+        os.remove(fname_per_type["xlsx"])
 
 
-def download_and_parse(ticker, dl_folder_fpath):
+def main(ticker, dl_folder_fpath):
 
     # diff_df = pd.read_csv("diff.csv")
     # diff_df["market_cap"] = diff_df["y_true"] * diff_df["current_volume"]
@@ -391,7 +390,7 @@ def download_and_parse(ticker, dl_folder_fpath):
     merge_sheet_across_years(ticker, sheet_per_year_target,
                              dl_folder_fpath, years)
 
-    # remove_temp_files(fname_per_type_per_year_per_ticker)
+    remove_temp_files(fname_per_type_per_year)
 
 
 def parse_args():
@@ -407,4 +406,4 @@ def parse_args():
 if __name__ == "__main__":
 
     args = parse_args()
-    download_and_parse(args.tickers, args.dl_folder_fpath)
+    main(args.tickers, args.dl_folder_fpath)
