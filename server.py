@@ -23,12 +23,14 @@ def download_10k(ticker, years):
     assert is_valid_ticker(ticker)
 
     ticker_folder = os.path.join(DEFAULT_FOLDER, ticker)
+    os.makedirs(ticker_folder, exist_ok=True)
     start_year, end_year = years.split("-")
-    years = range(int(start_year), int(end_year))
+    years = [str(year) for year in range(int(start_year), int(end_year) + 1)]
 
     missing_years = get_missing_years(ticker_folder, years)
     if missing_years:
-        excel_fpaths_to_clean = download_from_sec(ticker, missing_years)
+        excel_fpaths_to_clean = download_from_sec(ticker, missing_years,
+                                                  ticker_folder)
         for excel_fpath in excel_fpaths_to_clean:
             clean_excel(excel_fpath)
 

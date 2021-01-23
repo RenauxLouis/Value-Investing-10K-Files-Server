@@ -7,3 +7,17 @@ REGEX_PER_TARGET_SHEET = {
 	"income": ["income", "earning", "operation"],
 	"cash": ["cash"]
 }
+
+MAP_SEC_REGEX = {
+	"10-K": ("10-k", "10k"),
+	"10-K/A": ("htm", "10-ka"),
+	"DEF 14A": ("", "")
+}
+MAP_SEC_PREFIX = {
+	"10-K": "10K",
+	"10-K/A": "10K_amended",
+	"DEF 14A": "Proxy_Statement"
+}
+
+_10K_FILING_TYPE = "10-K"
+PROXY_STATEMENT_FILING_TYPE = "DEF 14A"

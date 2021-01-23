@@ -1,17 +1,16 @@
-import datetime
 import os
 import re
 import sys
 from collections import defaultdict
 from functools import reduce
-from shutil import rmtree
 
 from pandas import read_excel, merge, ExcelWriter
 from requests import get
 from bs4 import BeautifulSoup
 
-from constants import (DEFAULT_FOLDER, BASE_URL, BASE_EDGAR_URL,
-                       REGEX_PER_TARGET_SHEET)
+from constants import (BASE_URL, BASE_EDGAR_URL, REGEX_PER_TARGET_SHEET,
+                       MAP_SEC_REGEX, MAP_SEC_PREFIX, _10K_FILING_TYPE,
+                       PROXY_STATEMENT_FILING_TYPE)
 import pandas as pd
 
 
@@ -31,109 +30,99 @@ def get_cik(ticker):
     return cik
 
 
-def download_from_sec(ticker, years, dl_folder=DEFAULT_FOLDER):
+def download_from_sec(ticker, years, ticker_folder):
 
     cik = get_cik(ticker)
 
-    priorto = datetime.datetime.today().strftime("%Y%m%d")
-    # TODO: Allow for specific year selection
-    count = 5
-    ext = "htm"
-
-    ticker_folder = os.path.join(dl_folder, ticker)
-    if os.path.exists(ticker_folder):
-        rmtree(ticker_folder)
-
     # TODO: How to deal with half empty folders created
-    os.makedirs(ticker_folder)
 
-    filing_type = "10-K"
-    params = {"action": "getcompany", "owner": "exclude",
-              "output": "xml", "CIK": cik, "type": filing_type,
-              "dateb": priorto, "count": count}
-    r = get(BASE_URL, params=params)
-    if r.status_code != 200:
-        sys.exit("Ticker data not found")
-    else:
-        data = r.text
-        soup = BeautifulSoup(data, features="lxml")
+    _10k_url_per_year = get_10k_urls_per_year(
+        filing_type=_10K_FILING_TYPE, years=years, cik=cik)
+    proxy_statements_url_per_year = get_10k_urls_per_year(
+        filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
 
-        urls = [link.string for link in soup.find_all(
-            "filinghref")]
-        types = [link.string for link in soup.find_all(
-            "type")]
-
-        current_year = years[-1]
-        urls_per_year = defaultdict(dict)
-        N_10k = 0
-        for type_file, url in zip(types, urls):
-            if N_10k == 5:
-                break
-            urls_per_year[current_year][type_file] = url
-
-            if type_file == "10-K":
-                current_year -= 1
-                N_10k += 1
-
-    filing_type = "DEF 14A"
-    params = {"action": "getcompany", "owner": "exclude",
-              "output": "xml", "CIK": cik, "type": filing_type,
-              "dateb": priorto, "count": count}
-    r = get(BASE_URL, params=params)
-    if r.status_code != 200:
-        sys.exit("Ticker data not found")
-    else:
-        data = r.text
-        soup = BeautifulSoup(data, features="lxml")
-        urls = [link.string for link in soup.find_all(
-            "filinghref")]
-
-        current_year = years[-1]
-        for url in urls[:5]:
-            urls_per_year[current_year][filing_type] = url
-            current_year -= 1
-
-    map_regex = {
-        "10-K": ("10-k", "10k"),
-        "10-K/A": ("htm", "10-ka"),
-        "DEF 14A": ("", "")
-    }
-    map_prefix = {
-        "10-K": "10K",
-        "10-K/A": "10K_amended",
-        "DEF 14A": "Proxy_Statement"
-    }
     excel_fpaths = []
-    for year, urls in urls_per_year.items():
-        year_folder = os.path.join(ticker_folder, str(year))
-        os.makedirs(year_folder)
-        for file_type, url in urls.items():
-            file_type = file_type.replace("T", "")
-            prefix = map_prefix[file_type]
-            accession_numbers = [url.split("/")[-2]]
-            full_url = get_files_url(cik, accession_numbers,
-                                     ".htm", *map_regex[file_type])
+    for year, url in _10k_url_per_year.items():
+        year_folder = os.path.join(ticker_folder, year)
+        os.makedirs(year_folder, exist_ok=True)
 
-            r = get(full_url[0])
-            if r.status_code == 200:
-                fpath = os.path.join(
-                    year_folder, f"{ticker.upper()}_{prefix}.{ext}")
-                with open(fpath, "wb") as output:
-                    output.write(r.content)
+        accession_numbers = [url.split("/")[-2]]
 
-            if file_type == "10-K":
-                full_url = get_files_url(
-                    cik, accession_numbers, ".xlsx", "financial_report",
-                    "financial_report")
-                r = get(full_url[0])
-                if r.status_code == 200:
-                    fpath = os.path.join(
-                        year_folder, f"{ticker.upper()}_{prefix}.xlsx")
-                    excel_fpaths.append(fpath)
-                    with open(fpath, "wb") as output:
-                        output.write(r.content)
+        download_file_from_url(ticker, cik, accession_numbers, ".htm",
+                               _10K_FILING_TYPE, year_folder)
+        excel_fpath = download_file_from_url(
+            ticker, cik, accession_numbers, ".xlsx", _10K_FILING_TYPE,
+            year_folder)
+        excel_fpaths.append(excel_fpath)
+
+    for year, url in proxy_statements_url_per_year.items():
+        year_folder = os.path.join(ticker_folder, year)
+        os.makedirs(year_folder, exist_ok=True)
+
+        accession_numbers = [url.split("/")[-2]]
+
+        download_file_from_url(ticker, cik, accession_numbers, ".htm",
+                               PROXY_STATEMENT_FILING_TYPE, year_folder)
 
     return excel_fpaths
+
+
+def download_file_from_url(ticker, cik, accession_numbers,
+                           ext, file_type, local_fpath):
+
+    if ext == ".xlsx":
+        regex = ("financial_report", "financial_report")
+    else:
+        regex = MAP_SEC_REGEX[file_type]
+
+    prefix = MAP_SEC_PREFIX[file_type]
+
+    full_url = get_files_url(cik, accession_numbers, ext, *regex)
+    r = get(full_url[0])
+    status_code = r.status_code
+    if status_code == 200:
+        fpath = os.path.join(
+            local_fpath, f"{ticker.upper()}_{prefix}{ext}")
+        with open(fpath, "wb") as output:
+            output.write(r.content)
+    else:
+        raise Exception(f"Wrong status code: {status_code}")
+
+    return fpath
+
+
+def get_10k_urls_per_year(filing_type, years, cik):
+
+    current_year = years[-1]
+    current_year_param = current_year + "1231"
+    number_years_to_pull = len(years)
+
+    params = {"action": "getcompany", "owner": "exclude",
+              "output": "xml", "CIK": cik, "type": filing_type,
+              "dateb": current_year_param, "count": number_years_to_pull}
+    r = get(BASE_URL, params=params)
+    if r.status_code != 200:
+        sys.exit("Ticker data not found when pulling filing_type: "
+                 f"{filing_type}")
+
+    data = r.text
+    soup = BeautifulSoup(data, features="lxml")
+
+    urls = [link.string for link in soup.find_all("filinghref")]
+    types = [link.string for link in soup.find_all("type")]
+    dates_filed = [link.string for link in soup.find_all("datefiled")]
+    assert len(urls) == len(types) == len(dates_filed)
+
+    urls_per_year = {}
+    for i, file_type in enumerate(types):
+        if file_type == filing_type:
+            year = dates_filed[i].split("-")[0]
+            urls_per_year[year] = urls[i]
+
+    assert set(years).issubset(set(urls_per_year.keys()))
+    urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
+
+    return urls_per_year
 
 
 def get_files_url(cik, accession_numbers, ext, if_1, if_2):
@@ -187,7 +176,7 @@ def merge_excel_files_across_years(ticker_folder, years):
             dollar_format = workbook.add_format({"num_format": "$#,##0.00"})
 
             for year, sheet in sheet_per_year.items():
-                sheet_name = str(year)
+                sheet_name = year
                 clean_columns = [col.replace(
                     "Unnamed: ", "") for col in sheet.columns]
 
@@ -252,7 +241,7 @@ def clean_columns_df(sheet_per_year):
         if columns_to_keep:
             df = df[[title, *columns_to_keep]]
 
-        for year_i in [str(int(year) + 1), str(year)]:
+        for year_i in [str(int(year) + 1), year]:
             r = re.compile(".*" + year_i)
             year_col_list = list(
                 filter(r.match, df.columns))
@@ -310,7 +299,7 @@ def create_merged_df(sheet_per_year, writer, format1):
     years = sheet_per_year.keys()
     for col in merged_df.columns[1:]:
         for year in years:
-            if str(year) in col:
+            if year in col:
                 break
         else:
             drop_col.append(col)
@@ -318,9 +307,10 @@ def create_merged_df(sheet_per_year, writer, format1):
 
     merged_df = merged_df.drop_duplicates()
 
-    merged_sheet_name = str(
-        max(sheet_per_year.keys())) + "-" + str(
-            min(sheet_per_year.keys()))
+    years_as_int = [int(year) for year in sheet_per_year.keys()]
+    last_year = max(years_as_int)
+    first_year = min(years_as_int)
+    merged_sheet_name = str(last_year) + "-" + str(first_year)
     merged_df.to_excel(
         writer, sheet_name=merged_sheet_name, index=False)
 
@@ -349,7 +339,7 @@ def get_missing_years(ticker_folder, years):
         return years
 
     years_folders = os.listdir(ticker_folder)
-    missing_years = [year for year in years if str(year) not in years_folders]
+    missing_years = [year for year in years if year not in years_folders]
 
     return missing_years
 
@@ -360,9 +350,8 @@ def get_fpaths_from_local_ticker(ticker_folder, years):
     ticker_subfolders = os.listdir(ticker_folder)
 
     for year in years:
-        year_str = str(year)
-        if year_str in ticker_subfolders:
-            year_folder = os.path.join(ticker_folder, year_str)
+        if year in ticker_subfolders:
+            year_folder = os.path.join(ticker_folder, year)
             year_fnames = os.listdir(year_folder)
             year_fpaths = [os.path.join(year_folder, fname)
                            for fname in year_fnames]
@@ -398,7 +387,7 @@ def get_local_excel_fpath_per_year(ticker_folder, years):
 
     local_excel_fpath_per_year = {}
     for year in years:
-        year_folder = os.path.join(ticker_folder, str(year))
+        year_folder = os.path.join(ticker_folder, year)
         excel_fnames = [fname for fname in os.listdir(year_folder)
                         if os.path.splitext(fname)[1] == ".xlsx"]
         assert len(excel_fnames) == 1
