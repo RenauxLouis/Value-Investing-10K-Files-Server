@@ -8,13 +8,27 @@ from functools import reduce
 from shutil import rmtree
 
 from pandas import read_excel, merge, ExcelWriter
-import pandas as pd
 from requests import get
 from bs4 import BeautifulSoup
-from tqdm import tqdm
 
-BASE_URL = "http://www.sec.gov/cgi-bin/browse-edgar"
-BASE_EDGAR_URL = "https://www.sec.gov/Archives/edgar/data"
+from constants import (MAIN_FOLDER, BASE_URL, BASE_EDGAR_URL,
+                       REGEX_PER_TARGET_SHEET)
+
+
+def get_cik(ticker):
+
+    url = "http://www.sec.gov/cgi-bin/browse-edgar?CIK={}&Find=Search&owner"
+    "=exclude&action=getcompany"
+    cik_regex = re.compile(r".*CIK=(\d{10}).*")
+
+    f = get(url.format(ticker), stream=True)
+    results = cik_regex.findall(f.text)
+    try:
+        cik = str(results[0])
+    except Exception:
+        raise Exception("Failed finding ticker")
+
+    return cik
 
 
 def download_10k(ticker, cik, priorto, years, dl_folder):
@@ -156,69 +170,56 @@ def get_files_url(cik, accession_numbers, ext, if_1, if_2):
     return return_urls
 
 
-def get_cik(ticker):
+def get_target_sheets_per_year(fname_per_type_per_year):
 
-    URL = "http://www.sec.gov/cgi-bin/browse-edgar?CIK={}&Find=Search&owner"
-    "=exclude&action=getcompany"
-    CIK_RE = re.compile(r".*CIK=(\d{10}).*")
-
-    f = get(URL.format(ticker), stream=True)
-    results = CIK_RE.findall(f.text)
-    if len(results):
-        cik = str(results[0])
-    else:
-        raise Exception("Failed finding ticker")
-
-    return cik
-
-
-def parse_sheets(fname_per_type_per_year):
-
-    sheet_per_year_target = defaultdict(dict)
+    target_sheets_per_year = defaultdict(dict)
     for year, fname_per_type in fname_per_type_per_year.items():
 
-        xlsx_fpath = fname_per_type["xlsx"]
-        df_10k_per_sheet = read_excel(xlsx_fpath, sheet_name=None)
+        df_per_sheet = read_excel(fname_per_type["xlsx"], sheet_name=None)
 
-        target_list = ["cash", "balance sheet"]
-        target_income_statement = ["income", "earning", "operation"]
-        for sheet, df in df_10k_per_sheet.items():
+        sheet_name_per_title = {}
+        titles = []
+        for sheet_name, df in df_per_sheet.items():
             title = df.columns[0].lower()
-            for target in target_list:
-                if target in title:
-                    sheet_per_year_target[target][year] = df
-                    target_list.remove(target)
-                    break
+            titles.append(title)
+            sheet_name_per_title[title] = sheet_name
 
-            for target in target_income_statement:
-                if target in title:
-                    sheet_per_year_target["income"][year] = df
-                    target_income_statement = []
-                    break
-            if target_list == target_income_statement:
-                break
+        for target_sheet in ["balance sheet", "income", "cash"]:
+            target_regex = REGEX_PER_TARGET_SHEET[target_sheet]
+            target_sheet_title = get_first_matching(titles, target_regex)
+            df = df_per_sheet[sheet_name_per_title[target_sheet_title]]
+            target_sheets_per_year[target_sheet][year] = df
 
-    return sheet_per_year_target
+    return target_sheets_per_year
 
 
-def merge_sheet_across_years(ticker, sheet_per_year_per_target,
+def get_first_matching(titles, targets):
+
+    for title in titles:
+        if any(target in title for target in targets):
+            return title
+
+    return title
+
+
+def merge_sheet_across_years(ticker, target_sheets_per_year,
                              dl_folder_fpath, years):
 
     first_year = years[0]
     last_year = years[-1]
     map_sheet_name = {
         "balance sheet": f"Balance Sheet {first_year}-{last_year}.xlsx",
-        "cash": f"Cash Flow {first_year}-{last_year}.xlsx",
         "income": f"Income Statement {first_year}-{last_year}.xlsx",
+        "cash": f"Cash Flow {first_year}-{last_year}.xlsx",
     }
-    for target, sheet_per_year in sheet_per_year_per_target.items():
+
+    for target, sheet_per_year in target_sheets_per_year.items():
         fpath = os.path.join(dl_folder_fpath, ticker,
                              map_sheet_name[target])
 
         with ExcelWriter(fpath, engine="xlsxwriter") as writer:
             workbook = writer.book
-            # Format to $ cells
-            format1 = workbook.add_format({"num_format": "$#,##0.00"})
+            dollar_format = workbook.add_format({"num_format": "$#,##0.00"})
 
             for year, sheet in sheet_per_year.items():
                 sheet_name = str(year)
@@ -230,7 +231,7 @@ def merge_sheet_across_years(ticker, sheet_per_year_per_target,
                 sheet.to_excel(writer, sheet_name=sheet_name, index=False)
 
                 worksheet = writer.sheets[sheet_name]
-                worksheet.set_column(1, 10, cell_format=format1)
+                worksheet.set_column(1, 10, cell_format=dollar_format)
                 # Adjust columns
                 for idx, col in enumerate(sheet):
 
@@ -242,7 +243,6 @@ def merge_sheet_across_years(ticker, sheet_per_year_per_target,
                     )) + 1  # adding a little extra space
 
                     # set column width
-                    # print("count", series.isna().sum())
                     if (series.isna().sum() / len(series)) > 0.66:
                         default_max_length = 12
                     else:
@@ -250,7 +250,7 @@ def merge_sheet_across_years(ticker, sheet_per_year_per_target,
                     max_len = min(max_len, default_max_length)
                     worksheet.set_column(idx, idx, max_len)
 
-            create_merged_df(sheet_per_year, writer, format1)
+            create_merged_df(sheet_per_year, writer, dollar_format)
 
 
 def clean_columns_df(sheet_per_year):
@@ -365,45 +365,27 @@ def remove_temp_files(fname_per_type_per_year):
         os.remove(fname_per_type["xlsx"])
 
 
-def main(ticker, dl_folder_fpath):
+def main(ticker, years=None, dl_folder_fpath=MAIN_FOLDER):
 
-    # diff_df = pd.read_csv("diff.csv")
-    # diff_df["market_cap"] = diff_df["y_true"] * diff_df["current_volume"]
-    # diff_df = diff_df.sort_values("market_cap", ascending=False)
-    # diff_df = diff_df.dropna(subset=['Company'])
-    # tickers = diff_df["Company"].values[:1000]
+    print(f"Parsing 10K documents from ticker: {ticker} from years {years}")
 
     os.makedirs(dl_folder_fpath, exist_ok=True)
-    print(f"Parsing the last 5 10K documents from ticker: {ticker}")
+
     cik = get_cik(ticker)
 
     priorto = datetime.datetime.today().strftime("%Y%m%d")
+    if years is None:
+        print("Year not given, getting the last 5 years 10k files")
+        last_year = int(priorto[:4]) - 1
+        years = range(last_year-4, last_year+1)
 
-    last_year = int(priorto[:4]) - 1
-    years = range(last_year-4, last_year+1)
+    fname_per_type_per_year = download_10k(ticker, cik, priorto,
+                                           years, dl_folder_fpath)
 
-    fname_per_type_per_year = download_10k(ticker, cik, priorto, years,
-                                           dl_folder_fpath)
+    target_sheets_per_year = get_target_sheets_per_year(
+        fname_per_type_per_year)
 
-    sheet_per_year_target = parse_sheets(fname_per_type_per_year)
-
-    merge_sheet_across_years(ticker, sheet_per_year_target,
+    merge_sheet_across_years(ticker, target_sheets_per_year,
                              dl_folder_fpath, years)
 
     remove_temp_files(fname_per_type_per_year)
-
-
-def parse_args():
-    # Parse command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--ticker", type=str)
-    parser.add_argument("--dl_folder_fpath", default="default_dl", type=str)
-    args = parser.parse_args()
-
-    return args
-
-
-if __name__ == "__main__":
-
-    args = parse_args()
-    main(args.tickers, args.dl_folder_fpath)

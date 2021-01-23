@@ -3,11 +3,8 @@ import os
 from fastapi import FastAPI
 
 from download_10k import main as download_and_parse
-from read_local_files import (ticker_already_downloaded,
+from read_local_files import (get_missing_years,
                               get_fpaths_from_local_ticker)
-
-MAIN_FOLDER = "MAIN_FOLDER"
-os.makedirs(MAIN_FOLDER, exist_ok=True)
 
 app = FastAPI()
 
@@ -17,12 +14,16 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/ticker/{ticker}")
-def download_10k(ticker):
+@app.get("/ticker/{ticker}/years/{years}")
+def download_10k(ticker, years):
 
-    if not ticker_already_downloaded(ticker, MAIN_FOLDER):
-        download_and_parse(ticker, MAIN_FOLDER)
+    start_year, end_year = years.split("-")
+    years = range(int(start_year), int(end_year))
 
-    ticker_fpaths = get_fpaths_from_local_ticker(ticker, MAIN_FOLDER)
+    missing_years = get_missing_years(ticker, years)
+    if missing_years:
+        download_and_parse(ticker, years)
+
+    ticker_fpaths = get_fpaths_from_local_ticker(ticker)
 
     return {"input": ticker_fpaths}

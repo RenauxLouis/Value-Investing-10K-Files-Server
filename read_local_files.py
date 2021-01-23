@@ -1,12 +1,16 @@
 import os
 
+from constants import MAIN_FOLDER
 
-def ticker_already_downloaded(ticker, folder):
-    downloaded_tickers = os.listdir(folder)
-    return ticker in downloaded_tickers
+def get_missing_years(ticker, years, folder=MAIN_FOLDER):
 
 
-def get_fpaths_from_local_ticker(ticker, folder):
+    # downloaded_tickers = os.listdir(folder)
+    # return ticker in downloaded_tickers
+    return True
+
+
+def get_fpaths_from_local_ticker(ticker, folder=MAIN_FOLDER):
     downloaded_tickers = os.listdir(folder)
     assert ticker in downloaded_tickers
 
