@@ -1,6 +1,7 @@
 import os
-
-from fastapi import FastAPI
+from io import BytesIO
+from fastapi import FastAPI, Response
+import zipfile
 
 from constants import DEFAULT_FOLDER
 from download_10k_utils import (clean_excel, download_from_sec,
@@ -8,8 +9,38 @@ from download_10k_utils import (clean_excel, download_from_sec,
                                 get_fpaths_from_local_ticker,
                                 get_missing_years, get_ticker_cik,
                                 merge_excel_files_across_years)
+import shutil
 
 app = FastAPI()
+
+
+def zipfiles(fpaths):
+
+    zip_subdir = "archive"
+    zip_filename = "%s.zip" % zip_subdir
+
+    # Open StringIO to grab in-memory ZIP contents
+    s = BytesIO()
+    # The zip compressor
+    zf = zipfile.ZipFile(s, "w")
+
+    for fpath in fpaths:
+        # Calculate path for file in zip
+        fdir, fname = os.path.split(fpath)
+        zip_path = os.path.join(zip_subdir, fname)
+
+        # Add file, at correct path
+        zf.write(fpath, zip_path)
+
+    # Must close zip for all contents to be written
+    zf.close()
+
+    # Grab ZIP file from in-memory, make response with correct MIME-type
+    resp = Response(s.getvalue(), mimetype="application/x-zip-compressed")
+    # ..and correct content-disposition
+    resp["Content-Disposition"] = "attachment; filename=%s" % zip_filename
+
+    return resp
 
 
 @app.get("/")
@@ -46,4 +77,17 @@ def download_10k(ticker, years):
     raw_fpaths_to_send = get_fpaths_from_local_ticker(ticker_folder, years)
     fpaths_to_send = raw_fpaths_to_send + merged_fpaths
 
-    return {"fpaths": fpaths_to_send}
+    # return zipfiles(fpaths_to_send)
+
+    shutil.make_archive(ticker_folder, "zip", ticker_folder)
+    # headers = {
+    #     "Content-Disposition": f'attachment; filename="{ticker_folder}.zip"'
+    # }
+    # output = "coucou"
+    #   return StreamingResponse(output, headers=headers)
+
+    resp = Response("", mimetype="application/x-zip-compressed")
+    # ..and correct content-disposition
+    resp["Content-Disposition"] = f'attachment; filename="{ticker_folder}.zip"'
+    return resp
+
