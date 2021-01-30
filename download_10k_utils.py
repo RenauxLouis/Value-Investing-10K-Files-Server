@@ -4,15 +4,17 @@ import sys
 from collections import defaultdict
 from functools import reduce
 
+import boto3
 import pandas as pd
 from bs4 import BeautifulSoup
 from pandas import ExcelWriter, merge, read_excel
 from requests import get
 
-from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL, CIK_URL,
-                       MAP_SEC_PREFIX, MAP_SEC_REGEX,
+from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
+                       MAP_SEC_PREFIX, MAP_SEC_REGEX, DEFAULT_FOLDER,
                        PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
-                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH)
+                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH,
+                       TICKERS_10K_S3_BUCKET)
 
 
 def download_from_sec(ticker, cik, years, ticker_folder):
@@ -432,3 +434,40 @@ def get_first_matching(titles, targets):
             return title
 
     return title
+
+
+def download_ticker_folder_from_s3(ticker, ticker_folder):
+
+    s3_resource = boto3.resource("s3")
+    bucket = s3_resource.Bucket(TICKERS_10K_S3_BUCKET)
+
+    existing_s3_urls = []
+    for s3_obj in bucket.objects.filter(Prefix=ticker):
+        print(s3_obj)
+        s3_url = os.path.join("s3://", s3_obj.bucket_name, s3_obj.key)
+        existing_s3_urls.append(s3_url)
+
+        target = os.path.join(ticker_folder, os.path.relpath(s3_obj.key,
+                                                             ticker))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        if s3_obj.key[-1] == "/":
+            continue
+        bucket.download_file(s3_obj.key, target)
+
+    return existing_s3_urls
+
+
+def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
+
+    s3_client = boto3.client("s3")
+
+    s3_urls = []
+    for fpath in fpaths_to_send_to_user:
+        s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
+        s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
+        if s3_url not in existing_s3_urls:
+            s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
+
+        s3_urls.append(s3_url)
+
+    return s3_urls
