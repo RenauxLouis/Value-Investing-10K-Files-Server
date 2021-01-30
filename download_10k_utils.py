@@ -8,13 +8,21 @@ import boto3
 import pandas as pd
 from bs4 import BeautifulSoup
 from pandas import ExcelWriter, merge, read_excel
-from requests import get
+import requests
 
 from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
                        MAP_SEC_PREFIX, MAP_SEC_REGEX, DEFAULT_FOLDER,
                        PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
                        SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH,
                        TICKERS_10K_S3_BUCKET)
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+session = requests.Session()
+retry = Retry(connect=3, backoff_factor=0.5)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 
 def download_from_sec(ticker, cik, years, ticker_folder):
@@ -61,7 +69,7 @@ def download_file_from_url(ticker, cik, year, accession_numbers,
     prefix = MAP_SEC_PREFIX[file_type]
 
     full_url = get_files_url(cik, accession_numbers, ext, *regex)
-    r = get(full_url[0])
+    r = session.get(full_url[0])
     status_code = r.status_code
     if status_code == 200:
         fpath = os.path.join(
@@ -83,7 +91,7 @@ def get_urls_per_year(filing_type, years, cik):
     params = {"action": "getcompany", "owner": "exclude",
               "output": "xml", "CIK": cik, "type": filing_type,
               "dateb": current_year_param, "count": number_years_to_pull}
-    r = get(BASE_URL, params=params)
+    r = session.get(BASE_URL, params=params)
     if r.status_code != 200:
         sys.exit("Ticker data not found when pulling filing_type: "
                  f"{filing_type}")
@@ -114,7 +122,7 @@ def get_files_url(cik, accession_numbers, ext, if_1, if_2):
     for accession_number in accession_numbers:
         accession_number_url = os.path.join(
             BASE_EDGAR_URL, cik, accession_number).replace("\\", "/")
-        with get(accession_number_url) as r:
+        with session.get(accession_number_url) as r:
             if r.status_code == 200:
                 data = r.text
                 soup = BeautifulSoup(data, features="lxml")
@@ -331,7 +339,7 @@ def get_ticker_cik(ticker):
 
 def update_ticker_cik_df():
 
-    r = get(SEC_CIK_TXT_URL)
+    r = session.get(SEC_CIK_TXT_URL)
     content = r.content.decode("utf-8")
     rows = [line.split("\t") for line in content.splitlines()]
     df = pd.DataFrame(rows, columns=["ticker", "cik"])
@@ -443,7 +451,6 @@ def download_ticker_folder_from_s3(ticker, ticker_folder):
 
     existing_s3_urls = []
     for s3_obj in bucket.objects.filter(Prefix=ticker):
-        print(s3_obj)
         s3_url = os.path.join("s3://", s3_obj.bucket_name, s3_obj.key)
         existing_s3_urls.append(s3_url)
 
