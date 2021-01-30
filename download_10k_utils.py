@@ -17,9 +17,9 @@ from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL, CIK_URL,
 
 def download_from_sec(ticker, cik, years, ticker_folder):
 
-    _10k_url_per_year = get_10k_urls_per_year(
+    _10k_url_per_year = get_urls_per_year(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
-    proxy_statements_url_per_year = get_10k_urls_per_year(
+    proxy_statements_url_per_year = get_urls_per_year(
         filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
 
     excel_fpaths = []
@@ -72,7 +72,7 @@ def download_file_from_url(ticker, cik, year, accession_numbers,
     return fpath
 
 
-def get_10k_urls_per_year(filing_type, years, cik):
+def get_urls_per_year(filing_type, years, cik):
 
     current_year = years[-1]
     current_year_param = current_year + "1231"

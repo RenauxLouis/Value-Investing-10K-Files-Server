@@ -1,8 +1,9 @@
 import os
+from shutil import rmtree
 
 from fastapi import FastAPI
 
-from constants import DEFAULT_FOLDER
+from constants import DEFAULT_FOLDER, ZIP_FILES_FOLDER
 from download_10k_utils import (clean_excel, download_from_sec,
                                 get_existing_merged_fpaths,
                                 get_fpaths_from_local_ticker,
@@ -18,7 +19,10 @@ def read_root():
 
 
 @app.get("/ticker/{ticker}/years/{years}")
-def download_10k(ticker, years):
+async def download_10k(ticker, years):
+
+    rmtree(ZIP_FILES_FOLDER, ignore_errors=True)
+    os.makedirs(ZIP_FILES_FOLDER)
 
     cik = get_ticker_cik(ticker)
     if cik is None:
@@ -43,7 +47,10 @@ def download_10k(ticker, years):
         merged_fpaths = merge_excel_files_across_years(ticker_folder, years)
 
     # TODO: Don't send the raw xlsx file
-    raw_fpaths_to_send = get_fpaths_from_local_ticker(ticker_folder, years)
-    fpaths_to_send = raw_fpaths_to_send + merged_fpaths
+    raw_fpaths_to_upload_to_s3 = get_fpaths_from_local_ticker(
+        ticker_folder,  years)
+    fpaths_to_upload_to_s3 = raw_fpaths_to_upload_to_s3 + merged_fpaths
 
-    return {"fpaths": fpaths_to_send}
+    s3_urls = upload_files_to_s3(fpaths_to_upload_to_s3)
+
+    return {"s3_urls": s3_urls}
