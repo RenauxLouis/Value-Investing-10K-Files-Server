@@ -150,9 +150,9 @@ def get_files_url(cik, accession_numbers, ext, if_1, if_2):
     return return_urls
 
 
-def merge_excel_files_across_years(ticker_folder, years):
+def merge_excel_files_across_years(ticker, ticker_folder, years):
 
-    merged_fnames_map = get_merged_fnames_map(years)
+    merged_fnames_map = get_merged_fnames_map(ticker, years)
     excel_fpath_per_year = get_local_excel_fpath_per_year(ticker_folder, years)
     sheet_per_year_per_target = get_sheets_per_year_per_target(
         excel_fpath_per_year)
@@ -375,9 +375,9 @@ def get_fpaths_from_local_ticker(ticker_folder, years):
     return raw_fpaths
 
 
-def get_existing_merged_fpaths(ticker_folder, years):
+def get_existing_merged_fpaths(ticker, ticker_folder, years):
 
-    merged_fnames_map = get_merged_fnames_map(years)
+    merged_fnames_map = get_merged_fnames_map(ticker, years)
     merged_fpaths = [os.path.join(ticker_folder, fname)
                      for fname in merged_fnames_map.values()]
     existing_merged_fpaths = [fpath for fpath in merged_fpaths
@@ -386,14 +386,15 @@ def get_existing_merged_fpaths(ticker_folder, years):
     return existing_merged_fpaths
 
 
-def get_merged_fnames_map(years):
+def get_merged_fnames_map(ticker, years):
 
     first_year = years[0]
     last_year = years[-1]
     merged_fnames_map = {
-        "balance sheet": f"Balance Sheet {first_year}-{last_year}.xlsx",
-        "income": f"Income Statement {first_year}-{last_year}.xlsx",
-        "cash": f"Cash Flow {first_year}-{last_year}.xlsx",
+        "balance sheet": f"{ticker} Balance Sheet {first_year}-{last_year}"
+                         ".xlsx",
+        "income": f"{ticker} Income Statement {first_year}-{last_year}.xlsx",
+        "cash": f"{ticker} Cash Flow {first_year}-{last_year}.xlsx",
     }
     return merged_fnames_map
 

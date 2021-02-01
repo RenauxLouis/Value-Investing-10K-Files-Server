@@ -45,12 +45,14 @@ async def download_10k(ticker, years):
             for excel_fpath in excel_fpaths_to_clean:
                 clean_excel(excel_fpath)
 
-        existing_merged_fpaths = get_existing_merged_fpaths(ticker_folder,
+        existing_merged_fpaths = get_existing_merged_fpaths(ticker,
+                                                            ticker_folder,
                                                             years)
         if len(existing_merged_fpaths) == 3:
             merged_fpaths = existing_merged_fpaths
         else:
-            merged_fpaths = merge_excel_files_across_years(ticker_folder,
+            merged_fpaths = merge_excel_files_across_years(ticker,
+                                                           ticker_folder,
                                                            years)
 
         # TODO: Don't send the raw xlsx file
