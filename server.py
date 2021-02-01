@@ -1,16 +1,17 @@
 import os
-
-from fastapi_profiler.profiler_middleware import PyInstrumentProfilerMiddleware
+from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI
-from tempfile import TemporaryDirectory
+from fastapi_profiler.profiler_middleware import PyInstrumentProfilerMiddleware
+
 from constants import DEFAULT_FOLDER
 from download_10k_utils import (clean_excel, download_from_sec,
+                                download_ticker_folder_from_s3,
                                 get_existing_merged_fpaths,
                                 get_fpaths_from_local_ticker,
                                 get_missing_years, get_ticker_cik,
                                 merge_excel_files_across_years,
-                                upload_files_to_s3, download_ticker_folder_from_s3)
+                                upload_files_to_s3)
 
 app = FastAPI()
 app.add_middleware(PyInstrumentProfilerMiddleware)

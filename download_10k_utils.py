@@ -6,17 +6,17 @@ from functools import reduce
 
 import boto3
 import pandas as pd
+import requests
 from bs4 import BeautifulSoup
 from pandas import ExcelWriter, merge, read_excel
-import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
-                       MAP_SEC_PREFIX, MAP_SEC_REGEX, DEFAULT_FOLDER,
+                       DEFAULT_FOLDER, MAP_SEC_PREFIX, MAP_SEC_REGEX,
                        PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
                        SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH,
                        TICKERS_10K_S3_BUCKET)
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 
 session = requests.Session()
 retry = Retry(connect=3, backoff_factor=0.5)
