@@ -21,42 +21,74 @@ from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
 session = requests.Session()
 retry = Retry(connect=3, backoff_factor=0.5)
 adapter = HTTPAdapter(max_retries=retry)
-session.mount('http://', adapter)
-session.mount('https://', adapter)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 
-def download_from_sec(ticker, cik, years, ticker_folder):
+class SECDownloader():
 
-    _10k_url_per_year = get_urls_per_year(
-        filing_type=_10K_FILING_TYPE, years=years, cik=cik)
-    proxy_statements_url_per_year = get_urls_per_year(
-        filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
+    def __init__(self, ticker, years):
 
-    excel_fpaths = []
-    for year, url in _10k_url_per_year.items():
-        year_folder = os.path.join(ticker_folder, year)
-        os.makedirs(year_folder, exist_ok=True)
+        self.ticker = ticker
+        self.years = years
 
-        accession_numbers = [url.split("/")[-2]]
+        self.cik = get_ticker_cik(ticker)
 
-        download_file_from_url(ticker, cik, year, accession_numbers, ".htm",
-                               _10K_FILING_TYPE, year_folder)
-        excel_fpath = download_file_from_url(
-            ticker, cik, year, accession_numbers, ".xlsx", _10K_FILING_TYPE,
-            year_folder)
-        excel_fpaths.append(excel_fpath)
+    def download_from_sec(self, ticker, cik, years, ticker_folder,
+                          raw_files_to_send):
 
-    for year, url in proxy_statements_url_per_year.items():
-        year_folder = os.path.join(ticker_folder, year)
-        os.makedirs(year_folder, exist_ok=True)
+        _10k_url_per_year = get_urls_per_year(
+            filing_type=_10K_FILING_TYPE, years=years, cik=cik)
+        excel_fpaths = []
+        for year, url in _10k_url_per_year.items():
+            year_folder = os.path.join(ticker_folder, year)
+            os.makedirs(year_folder, exist_ok=True)
 
-        accession_numbers = [url.split("/")[-2]]
+            accession_numbers = [url.split("/")[-2]]
 
-        download_file_from_url(ticker, cik, year, accession_numbers, ".htm",
-                               PROXY_STATEMENT_FILING_TYPE, year_folder)
+            if raw_files_to_send["10k"]:
+                download_file_from_url(ticker, cik, year, accession_numbers,
+                                       ".htm", _10K_FILING_TYPE, year_folder)
+            if raw_files_to_send["xlsx"]:
+                excel_fpath = download_file_from_url(
+                    ticker, cik, year, accession_numbers, ".xlsx",
+                    _10K_FILING_TYPE, year_folder)
+                excel_fpaths.append(excel_fpath)
 
-    return excel_fpaths
+        if raw_files_to_send["proxy_statement"]:
+            proxy_statements_url_per_year = get_urls_per_year(
+                filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
+            for year, url in proxy_statements_url_per_year.items():
+                year_folder = os.path.join(ticker_folder, year)
+                os.makedirs(year_folder, exist_ok=True)
 
+                accession_numbers = [url.split("/")[-2]]
+
+                download_file_from_url(
+                    ticker, cik, year, accession_numbers, ".htm",
+                    PROXY_STATEMENT_FILING_TYPE, year_folder)
+
+        return excel_fpaths
+
+
+def parse_inputs(getXlsx, get10k, getProxyStatement, getBalanceSheet,
+                 getIncomeStatement, getCashFlowStatement, years):
+
+    raw_files_to_send = {
+        "xlsx": getXlsx,
+        "10k": get10k,
+        "proxy_statement": getProxyStatement
+    }
+    merged_files_to_send = {
+        "balance_sheet": getBalanceSheet,
+        "income": getIncomeStatement,
+        "cash": getCashFlowStatement,
+    }
+    start_year, end_year = years.split("-")
+    years = [str(year) for year in range(int(start_year),
+                                         int(end_year) + 1)]
+
+    return raw_files_to_send, merged_files_to_send, years
 
 def download_file_from_url(ticker, cik, year, accession_numbers,
                            ext, file_type, local_fpath):
@@ -413,7 +445,7 @@ def get_local_excel_fpath_per_year(ticker_folder, years):
     return local_excel_fpath_per_year
 
 
-def clean_excel(excel_fpath):
+def clean_excel(excel_fpath, merged_files_to_send):
 
     df_per_sheet = read_excel(excel_fpath, sheet_name=None)
 
@@ -425,13 +457,14 @@ def clean_excel(excel_fpath):
         sheet_name_per_title[title] = sheet_name
 
     with pd.ExcelWriter(excel_fpath) as writer:
-        for target_sheet_name in ["balance sheet", "income", "cash"]:
-            target_regex = REGEX_PER_TARGET_SHEET[target_sheet_name]
-            target_sheet_title = get_first_matching(titles,
-                                                    target_regex)
-            df = df_per_sheet[sheet_name_per_title[target_sheet_title]]
-            df.to_excel(writer, sheet_name=target_sheet_name,
-                        index=False)
+        for target_sheet_name, to_send in merged_files_to_send.items():
+            if to_send:
+                target_regex = REGEX_PER_TARGET_SHEET[target_sheet_name]
+                target_sheet_title = get_first_matching(titles,
+                                                        target_regex)
+                df = df_per_sheet[sheet_name_per_title[target_sheet_title]]
+                df.to_excel(writer, sheet_name=target_sheet_name,
+                            index=False)
 
     return
 
