@@ -1,21 +1,16 @@
 import os
 import re
-import sys
 from collections import defaultdict
 from functools import reduce
 
 import boto3
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 from pandas import ExcelWriter, merge, read_excel
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
-                       DEFAULT_FOLDER, MAP_SEC_PREFIX, MAP_SEC_REGEX,
-                       PROXY_STATEMENT_FILING_TYPE, REGEX_PER_TARGET_SHEET,
-                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH,
+from constants import (DEFAULT_FOLDER,  REGEX_PER_TARGET_SHEET,
                        TICKERS_10K_S3_BUCKET)
 
 session = requests.Session()
@@ -23,163 +18,6 @@ retry = Retry(connect=3, backoff_factor=0.5)
 adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
-
-
-class SECDownloader():
-
-    def __init__(self, ticker, years):
-
-        self.ticker = ticker
-        self.years = years
-
-        self.cik = get_ticker_cik(ticker)
-
-    def download_from_sec(self, ticker, cik, years, ticker_folder,
-                          raw_files_to_send):
-
-        _10k_url_per_year = get_urls_per_year(
-            filing_type=_10K_FILING_TYPE, years=years, cik=cik)
-        excel_fpaths = []
-        for year, url in _10k_url_per_year.items():
-            year_folder = os.path.join(ticker_folder, year)
-            os.makedirs(year_folder, exist_ok=True)
-
-            accession_numbers = [url.split("/")[-2]]
-
-            if raw_files_to_send["10k"]:
-                download_file_from_url(ticker, cik, year, accession_numbers,
-                                       ".htm", _10K_FILING_TYPE, year_folder)
-            if raw_files_to_send["xlsx"]:
-                excel_fpath = download_file_from_url(
-                    ticker, cik, year, accession_numbers, ".xlsx",
-                    _10K_FILING_TYPE, year_folder)
-                excel_fpaths.append(excel_fpath)
-
-        if raw_files_to_send["proxy_statement"]:
-            proxy_statements_url_per_year = get_urls_per_year(
-                filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
-            for year, url in proxy_statements_url_per_year.items():
-                year_folder = os.path.join(ticker_folder, year)
-                os.makedirs(year_folder, exist_ok=True)
-
-                accession_numbers = [url.split("/")[-2]]
-
-                download_file_from_url(
-                    ticker, cik, year, accession_numbers, ".htm",
-                    PROXY_STATEMENT_FILING_TYPE, year_folder)
-
-        return excel_fpaths
-
-
-def parse_inputs(getXlsx, get10k, getProxyStatement, getBalanceSheet,
-                 getIncomeStatement, getCashFlowStatement, years):
-
-    raw_files_to_send = {
-        "xlsx": getXlsx,
-        "10k": get10k,
-        "proxy_statement": getProxyStatement
-    }
-    merged_files_to_send = {
-        "balance_sheet": getBalanceSheet,
-        "income": getIncomeStatement,
-        "cash": getCashFlowStatement,
-    }
-    start_year, end_year = years.split("-")
-    years = [str(year) for year in range(int(start_year),
-                                         int(end_year) + 1)]
-
-    return raw_files_to_send, merged_files_to_send, years
-
-def download_file_from_url(ticker, cik, year, accession_numbers,
-                           ext, file_type, local_fpath):
-
-    if ext == ".xlsx":
-        regex = ("financial_report", "financial_report")
-    else:
-        regex = MAP_SEC_REGEX[file_type]
-
-    prefix = MAP_SEC_PREFIX[file_type]
-
-    full_url = get_files_url(cik, accession_numbers, ext, *regex)
-    r = session.get(full_url[0])
-    status_code = r.status_code
-    if status_code == 200:
-        fpath = os.path.join(
-            local_fpath, f"{ticker.upper()}_{prefix}_{year}{ext}")
-        with open(fpath, "wb") as output:
-            output.write(r.content)
-    else:
-        raise Exception(f"Wrong status code: {status_code}")
-
-    return fpath
-
-
-def get_urls_per_year(filing_type, years, cik):
-
-    current_year = years[-1]
-    current_year_param = current_year + "1231"
-    number_years_to_pull = len(years)
-
-    params = {"action": "getcompany", "owner": "exclude",
-              "output": "xml", "CIK": cik, "type": filing_type,
-              "dateb": current_year_param, "count": number_years_to_pull}
-    r = session.get(BASE_URL, params=params)
-    if r.status_code != 200:
-        sys.exit("Ticker data not found when pulling filing_type: "
-                 f"{filing_type}")
-
-    data = r.text
-    soup = BeautifulSoup(data, features="lxml")
-
-    urls = [link.string for link in soup.find_all("filinghref")]
-    types = [link.string for link in soup.find_all("type")]
-    dates_filed = [link.string for link in soup.find_all("datefiled")]
-    assert len(urls) == len(types) == len(dates_filed)
-
-    urls_per_year = {}
-    for i, file_type in enumerate(types):
-        if file_type == filing_type:
-            year = dates_filed[i].split("-")[0]
-            urls_per_year[year] = urls[i]
-
-    assert set(years).issubset(set(urls_per_year.keys()))
-    urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
-
-    return urls_per_year
-
-
-def get_files_url(cik, accession_numbers, ext, if_1, if_2):
-
-    return_urls = []
-    for accession_number in accession_numbers:
-        accession_number_url = os.path.join(
-            BASE_EDGAR_URL, cik, accession_number).replace("\\", "/")
-        with session.get(accession_number_url) as r:
-            if r.status_code == 200:
-                data = r.text
-                soup = BeautifulSoup(data, features="lxml")
-                links = [link.get("href") for link in soup.findAll("a")]
-                corresponding_file_extension = [link for link in links if (
-                    os.path.splitext(link)[-1] == ext)]
-                urls = [link for link in corresponding_file_extension if (
-                    if_1 in link.lower() or if_2 in link.lower())]
-                urls_accession_num = [
-                    url for url in urls if accession_number in url]
-                # TODO
-                # Find better method to pick the correct file (can't get cik V)
-                if urls_accession_num == []:
-                    # Get first htm url with accession_number
-                    urls_accession_num = [link for link in links if (
-                        os.path.splitext(link)[
-                            -1] == ext and accession_number in link)]
-                fname = os.path.basename(urls_accession_num[0])
-                url = os.path.join(accession_number_url, fname).replace(
-                    "\\", "/")
-                return_urls.append(url)
-                # return_urls.append("check_amended")
-            else:
-                print("Error when request:", r.status_code)
-    return return_urls
 
 
 def merge_excel_files_across_years(ticker, ticker_folder, years):
@@ -352,34 +190,6 @@ def create_merged_df(sheet_per_year, writer, format1):
         worksheet.set_column(idx, idx, max_len)
 
 
-def get_ticker_cik(ticker):
-
-    ticker_lower = ticker.lower()
-    ticker_cik_df = pd.read_csv(TICKER_CIK_CSV_FPATH)
-    if not any(ticker_cik_df.ticker.str.contains(ticker_lower)):
-        ticker_cik_df = update_ticker_cik_df()
-        if not any(ticker_cik_df.ticker.str.contains(ticker_lower)):
-            return None
-
-    ciks = ticker_cik_df.loc[
-        ticker_cik_df["ticker"] == ticker_lower]["cik"].values
-    assert len(ciks) == 1, ciks
-    cik = str(ciks[0])
-
-    return cik
-
-
-def update_ticker_cik_df():
-
-    r = session.get(SEC_CIK_TXT_URL)
-    content = r.content.decode("utf-8")
-    rows = [line.split("\t") for line in content.splitlines()]
-    df = pd.DataFrame(rows, columns=["ticker", "cik"])
-    df.to_csv(TICKER_CIK_CSV_FPATH)
-
-    return df
-
-
 def get_missing_years(ticker_folder, years):
 
     if not os.path.exists(ticker_folder):
@@ -478,6 +288,41 @@ def get_first_matching(titles, targets):
     return title
 
 
+def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
+
+    s3_client = boto3.client("s3")
+
+    s3_urls = []
+    for fpath in fpaths_to_send_to_user:
+        s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
+        s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
+        if s3_url not in existing_s3_urls:
+            s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
+
+        s3_urls.append(s3_url)
+
+    return s3_urls
+
+
+def parse_inputs(get10k, getProxyStatement, getBalanceSheet,
+                 getIncomeStatement, getCashFlowStatement, years):
+
+    raw_files_to_send = {
+        "10k": get10k == "y",
+        "proxy": getProxyStatement == "y"
+    }
+    merged_files_to_send = {
+        "balance": getBalanceSheet == "y",
+        "income": getIncomeStatement == "y",
+        "cash": getCashFlowStatement == "y",
+    }
+    start_year, end_year = years.split("-")
+    years = [str(year) for year in range(int(start_year),
+                                         int(end_year) + 1)]
+
+    return raw_files_to_send, merged_files_to_send, years
+
+
 def download_ticker_folder_from_s3(ticker, ticker_folder):
 
     s3_resource = boto3.resource("s3")
@@ -498,17 +343,19 @@ def download_ticker_folder_from_s3(ticker, ticker_folder):
     return existing_s3_urls
 
 
-def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
+def filter_fpaths_to_send(fpaths_to_send_to_user, raw_files_to_send,
+                          merged_files_to_send):
 
-    s3_client = boto3.client("s3")
+    raw_files_to_remove = [file_type for file_type, select in
+                           raw_files_to_send.items() if not select]
+    merged_files_to_remove = [file_type for file_type, select in
+                              merged_files_to_send.items() if not select]
 
-    s3_urls = []
-    for fpath in fpaths_to_send_to_user:
-        s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
-        s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
-        if s3_url not in existing_s3_urls:
-            s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
+    for file_regex in raw_files_to_remove:
+        fpaths_to_send_to_user = [file for file in fpaths_to_send_to_user
+                                  if file_regex not in file.lower()]
+    for file_regex in merged_files_to_remove:
+        fpaths_to_send_to_user = [file for file in fpaths_to_send_to_user
+                                  if file_regex not in file.lower()]
 
-        s3_urls.append(s3_url)
-
-    return s3_urls
+    return fpaths_to_send_to_user
