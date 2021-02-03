@@ -38,7 +38,7 @@ class SECDownloader():
             if ticker_lower not in self.cik_per_ticker:
                 return None
 
-        return self.cik_per_ticker[ticker_lower]
+        return str(self.cik_per_ticker[ticker_lower])
 
 
 def download(ticker, cik, years, ticker_folder):
