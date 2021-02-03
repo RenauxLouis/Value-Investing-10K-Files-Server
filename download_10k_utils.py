@@ -255,7 +255,7 @@ def get_local_excel_fpath_per_year(ticker_folder, years):
     return local_excel_fpath_per_year
 
 
-def clean_excel(excel_fpath, merged_files_to_send):
+def clean_excel(excel_fpath):
 
     df_per_sheet = read_excel(excel_fpath, sheet_name=None)
 
@@ -267,14 +267,13 @@ def clean_excel(excel_fpath, merged_files_to_send):
         sheet_name_per_title[title] = sheet_name
 
     with pd.ExcelWriter(excel_fpath) as writer:
-        for target_sheet_name, to_send in merged_files_to_send.items():
-            if to_send:
-                target_regex = REGEX_PER_TARGET_SHEET[target_sheet_name]
-                target_sheet_title = get_first_matching(titles,
-                                                        target_regex)
-                df = df_per_sheet[sheet_name_per_title[target_sheet_title]]
-                df.to_excel(writer, sheet_name=target_sheet_name,
-                            index=False)
+        for target_sheet_name in REGEX_PER_TARGET_SHEET:
+            target_regex = REGEX_PER_TARGET_SHEET[target_sheet_name]
+            target_sheet_title = get_first_matching(titles,
+                                                    target_regex)
+            df = df_per_sheet[sheet_name_per_title[target_sheet_title]]
+            df.to_excel(writer, sheet_name=target_sheet_name,
+                        index=False)
 
     return
 
