@@ -26,18 +26,9 @@ def read_root():
     return {"Hello": "World"}
 
 
-# expected_fpaths_to_send = {
-#     for year in 2018-2020:
-#         proxy statement
-#         10k htm
-#     Balance Sheet 2018 2020
-#     Income 2018 2020
-#     Cash 2018 2020
-# }
-
 @app.get("/params/")
 async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
-
+    print("Download with params", ticker, years, _10k, Proxy, Balance, Income, Cash)
     raw_files_to_send, merged_files_to_send, years = parse_inputs(
         _10k, Proxy, Balance, Income, Cash, years)
 
