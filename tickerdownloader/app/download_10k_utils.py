@@ -307,13 +307,13 @@ def parse_inputs(get10k, getProxyStatement, getBalanceSheet,
                  getIncomeStatement, getCashFlowStatement, years):
 
     raw_files_to_send = {
-        "10k": get10k == "y",
-        "proxy": getProxyStatement == "y"
+        "10k": get10k == "true",
+        "proxy": getProxyStatement == "true"
     }
     merged_files_to_send = {
-        "balance": getBalanceSheet == "y",
-        "income": getIncomeStatement == "y",
-        "cash": getCashFlowStatement == "y",
+        "balance": getBalanceSheet == "true",
+        "income": getIncomeStatement == "true",
+        "cash": getCashFlowStatement == "true",
     }
     start_year, end_year = years.split("-")
     years = [str(year) for year in range(int(start_year),

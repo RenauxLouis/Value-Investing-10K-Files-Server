@@ -10,7 +10,7 @@ services:
           - api
 
     api:
-        build: domainchecker
+        build: tickerdownloader
         environment:
           - PORT=8080
         ports:

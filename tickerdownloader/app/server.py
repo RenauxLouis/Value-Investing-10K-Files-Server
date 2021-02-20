@@ -36,13 +36,10 @@ def read_root():
 # }
 
 @app.get("/params/")
-async def download_10k(ticker, get10k, getProxyStatement,
-                       getBalanceSheet, getIncomeStatement,
-                       getCashFlowStatement, years):
+async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
 
     raw_files_to_send, merged_files_to_send, years = parse_inputs(
-        get10k, getProxyStatement, getBalanceSheet,
-        getIncomeStatement, getCashFlowStatement, years)
+        _10k, Proxy, Balance, Income, Cash, years)
 
     cik = sec_downloader.get_ticker_cik(ticker)
 
