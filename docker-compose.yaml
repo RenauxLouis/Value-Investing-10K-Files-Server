@@ -1,21 +1,17 @@
-version: '3.8'
+version: "3.7"
 
 services:
-  web:
-    build:
-       context: ./tickerdownloader/app
-    command: gunicorn server:app --bind 0.0.0.0:5000 -w 4 -k uvicorn.workers.UvicornWorker
-    expose:
-      - 5000
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.fastapi.rule=Host(`fastapi.localhost`)"
+    web:
+        build: nginx
+        ports:
+          - 80:80
+          - 443:443
+        depends_on:
+          - api
 
-  traefik:
-    image: traefik:v2.2
-    ports:
-      - "80:80"
-      - "8080:8080"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "$PWD/services/traefik/traefik.dev.toml:/etc/traefik/traefik.toml"
+    api:
+        build: tickerdownloader
+        environment:
+          - PORT=8080
+        ports:
+          - 8080:8080
