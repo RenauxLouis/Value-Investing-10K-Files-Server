@@ -112,7 +112,11 @@ def get_urls_per_year(filing_type, years, cik):
             year = dates_filed[i].split("-")[0]
             urls_per_year[year] = urls[i]
 
-    assert set(years).issubset(set(urls_per_year.keys()))
+    years_set = set(years)
+    urls_per_year_set = set(urls_per_year.keys())
+    assert years_set.issubset(urls_per_year_set), (
+        f"{years_set} not a subset of {urls_per_year_set}"
+    )
     urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
 
     return urls_per_year
