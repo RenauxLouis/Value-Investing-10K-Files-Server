@@ -43,7 +43,6 @@ class SECDownloader():
 
 def download(ticker, cik, years, ticker_folder):
 
-    print("Download", ticker, cik, years, ticker_folder)
     _10k_url_per_year = get_urls_per_year(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
@@ -87,13 +86,13 @@ def update_ticker_cik_df():
 
 
 def get_urls_per_year(filing_type, years, cik):
-    last_year = years[-1]
-    last_year_param = last_year + "1231"
+    current_year = years[-1]
+    current_year_param = current_year + "1231"
     number_years_to_pull = len(years)
 
     params = {"action": "getcompany", "owner": "exclude",
               "output": "xml", "CIK": cik, "type": filing_type,
-              "dateb": last_year_param, "count": number_years_to_pull}
+              "dateb": current_year_param, "count": number_years_to_pull}
     r = session.get(BASE_URL, params=params)
     if r.status_code != 200:
         sys.exit("Ticker data not found when pulling filing_type: "
@@ -101,67 +100,20 @@ def get_urls_per_year(filing_type, years, cik):
 
     data = r.text
     soup = BeautifulSoup(data, features="lxml")
-    print(soup)
 
     urls = [link.string for link in soup.find_all("filinghref")]
     types = [link.string for link in soup.find_all("type")]
     dates_filed = [link.string for link in soup.find_all("datefiled")]
-    years_filed = [date.split("-")[0] for date in dates_filed]
     assert len(urls) == len(types) == len(dates_filed)
-    print("urls", urls)
-    print("types", types)
-    print("dates_filed", dates_filed)
-
-    if year_missing(years_filed):
-        urls_per_year = match_years_by_index(types, years, urls, filing_type)
-    else:
-        urls_per_year = match_years_by_value(types, years_filed,
-                                             urls, filing_type)
-
-    years_set = set(years)
-    urls_per_year_set = set(urls_per_year.keys())
-    assert years_set.issubset(urls_per_year_set), (
-        f"{years_set} not a subset of {urls_per_year_set}"
-    )
-    urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
-
-    return urls_per_year
-
-
-def year_missing(years_filed):
-
-    def _has_duplicate_items(_list):
-        return len(_list) != len(set(_list))
-
-    def _has_missing_year(years):
-
-        years_as_int = [int(year) for year in years]
-        min_year = min(years_as_int)
-        max_year = max(years_as_int)
-        years_range_set = set(range(min_year, max_year + 1))
-
-        return years_range_set.issubset(set(years_as_int))
-
-    return _has_duplicate_items(years_filed) or _has_missing_year(years_filed)
-
-
-def match_years_by_value(types, years_filed, urls, filing_type):
 
     urls_per_year = {}
     for i, file_type in enumerate(types):
         if file_type == filing_type:
-            year = years_filed[i]
+            year = dates_filed[i].split("-")[0]
             urls_per_year[year] = urls[i]
 
-    return urls_per_year
-
-
-def match_years_by_index(types, years, urls, filing_type):
-
-    urls_per_year = {}
-    for i, reversed_year in enumerate(years[::-1]):
-        if types[i] == filing_type:
-            urls_per_year[reversed_year] = urls[i]
+    assert set(years).issubset(set(urls_per_year.keys()))
+    urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
 
     return urls_per_year
 
