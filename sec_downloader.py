@@ -101,29 +101,34 @@ def get_urls_per_year(filing_type, years, cik):
 
     data = r.text
     soup = BeautifulSoup(data, features="lxml")
-    print(soup)
 
     urls = [link.string for link in soup.find_all("filinghref")]
     types = [link.string for link in soup.find_all("type")]
     dates_filed = [link.string for link in soup.find_all("datefiled")]
     years_filed = [date.split("-")[0] for date in dates_filed]
-    assert len(urls) == len(types) == len(dates_filed)
-    print("urls", urls)
-    print("types", types)
-    print("dates_filed", dates_filed)
+    assert len(urls) == len(types) == len(years_filed)
 
-    if year_missing(years_filed):
-        urls_per_year = match_years_by_index(types, years, urls, filing_type)
-    else:
-        urls_per_year = match_years_by_value(types, years_filed,
-                                             urls, filing_type)
+    df_urls = pd.DataFrame(zip(urls, types, years_filed),
+                           columns=["url", "type", "year_filed"])
+    df_urls = df_urls.loc[df_urls["type"] == filing_type]
+    print(df_urls)
 
     years_set = set(years)
-    urls_per_year_set = set(urls_per_year.keys())
-    assert years_set.issubset(urls_per_year_set), (
-        f"{years_set} not a subset of {urls_per_year_set}"
-    )
-    urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
+    years_filed_set = set(years_filed)
+
+    if years_set.issubset(years_filed_set):
+        urls_per_year = dict(zip(df_urls.year_filed, df_urls.url))
+        urls_per_year = {k: v for k, v in urls_per_year.items() if k in years}
+    else:
+        df_urls["year_filed_int"] = df_urls["year_filed"].apply(
+            lambda x: int(x))
+        df_urls_decrease_years = df_urls.sort_values(by=["year_filed_int"],
+                                                     ascending=False)
+        urls = df_urls_decrease_years["url"].values
+
+        urls_per_year = {}
+        for i, year in enumerate(years[::-1]):
+            urls_per_year[year] = urls[i]
 
     return urls_per_year
 
