@@ -43,6 +43,7 @@ class SECDownloader():
 
 def download(ticker, cik, years, ticker_folder):
 
+    print("Download", ticker, cik, years, ticker_folder)
     _10k_url_per_year = get_urls_per_year(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
@@ -100,11 +101,15 @@ def get_urls_per_year(filing_type, years, cik):
 
     data = r.text
     soup = BeautifulSoup(data, features="lxml")
+    print(soup)
 
     urls = [link.string for link in soup.find_all("filinghref")]
     types = [link.string for link in soup.find_all("type")]
     dates_filed = [link.string for link in soup.find_all("datefiled")]
     assert len(urls) == len(types) == len(dates_filed)
+    print("urls", urls)
+    print("types", types)
+    print("dates_filed", dates_filed)
 
     urls_per_year = {}
     for i, file_type in enumerate(types):

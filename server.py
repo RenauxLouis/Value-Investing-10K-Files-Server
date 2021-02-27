@@ -21,9 +21,9 @@ app.add_middleware(PyInstrumentProfilerMiddleware)
 sec_downloader = SECDownloader()
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+# @app.get("/")
+# def read_root():
+#     return {"Hello": "World"}
 
 
 @app.get("/params/")
@@ -41,7 +41,7 @@ async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
         os.makedirs(ticker_folder)
 
         existing_s3_urls = download_ticker_folder_from_s3(
-            ticker,  ticker_folder)
+            ticker, ticker_folder)
         created_fpath = create_files(ticker, ticker_folder, cik, years)
         fpaths_to_send_to_user = filter_fpaths_to_send(
             created_fpath, raw_files_to_send, merged_files_to_send)
