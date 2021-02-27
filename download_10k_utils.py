@@ -287,7 +287,7 @@ def get_first_matching(titles, targets):
     return title
 
 
-def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
+def upload_files_to_s3(fpaths_to_send_to_user):
 
     s3_client = boto3.client("s3")
 
@@ -295,9 +295,7 @@ def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
     for fpath in fpaths_to_send_to_user:
         s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
         s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
-        if s3_url not in existing_s3_urls:
-            s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
-
+        s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
         s3_urls.append(s3_url)
 
     return s3_urls

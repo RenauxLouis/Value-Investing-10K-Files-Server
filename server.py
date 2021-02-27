@@ -40,32 +40,22 @@ async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
         ticker_folder = os.path.join(dirpath, DEFAULT_FOLDER, ticker)
         os.makedirs(ticker_folder)
 
-        existing_s3_urls = download_ticker_folder_from_s3(
-            ticker,  ticker_folder)
         created_fpath = create_files(ticker, ticker_folder, cik, years)
         fpaths_to_send_to_user = filter_fpaths_to_send(
             created_fpath, raw_files_to_send, merged_files_to_send)
-        s3_urls = upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls)
+        s3_urls = upload_files_to_s3(fpaths_to_send_to_user)
 
         return {"s3_urls": s3_urls}
 
 
 def create_files(ticker, ticker_folder, cik, years):
 
-    missing_years = get_missing_years(ticker_folder, years)
-    if missing_years:
-        excel_fpaths_to_clean = download(ticker, cik, missing_years,
-                                         ticker_folder)
-        for excel_fpath in excel_fpaths_to_clean:
-            clean_excel(excel_fpath)
+    excel_fpaths_to_clean = download(ticker, cik, years, ticker_folder)
+    for excel_fpath in excel_fpaths_to_clean:
+        clean_excel(excel_fpath)
 
-    existing_merged_fpaths = get_existing_merged_fpaths(
+    merged_fpaths = merge_excel_files_across_years(
         ticker, ticker_folder, years)
-    if len(existing_merged_fpaths) == 3:
-        merged_fpaths = existing_merged_fpaths
-    else:
-        merged_fpaths = merge_excel_files_across_years(
-            ticker, ticker_folder, years)
 
     raw_fpaths = get_fpaths_from_local_ticker(
         ticker_folder, years)
