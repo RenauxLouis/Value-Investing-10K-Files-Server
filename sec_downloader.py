@@ -113,7 +113,7 @@ def get_urls_per_year(filing_type, years, cik):
     print("dates_filed", dates_filed)
 
     if year_missing(years_filed):
-        urls_per_year = match_years_by_index()
+        urls_per_year = match_years_by_index(types, years, urls, filing_type)
     else:
         urls_per_year = match_years_by_value(types, years_filed,
                                              urls, filing_type)
