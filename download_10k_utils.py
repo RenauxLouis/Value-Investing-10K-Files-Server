@@ -248,7 +248,8 @@ def get_local_excel_fpath_per_year(ticker_folder, years):
         year_folder = os.path.join(ticker_folder, year)
         excel_fnames = [fname for fname in os.listdir(year_folder)
                         if os.path.splitext(fname)[1] == ".xlsx"]
-        assert len(excel_fnames) == 1
+        assert len(excel_fnames) == 1, (
+            f"Not a unique excel_fname for year {years} but {excel_fnames}")
         excel_fpath = os.path.join(year_folder, excel_fnames[0])
         local_excel_fpath_per_year[year] = excel_fpath
 
