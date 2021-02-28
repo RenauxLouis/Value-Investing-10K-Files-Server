@@ -2,7 +2,7 @@ import os
 from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI
-from fastapi_profiler.profiler_middleware import PyInstrumentProfilerMiddleware
+# from fastapi_profiler.profiler_middleware import PyInstrumentProfilerMiddleware
 
 from constants import DEFAULT_FOLDER
 from download_10k_utils import (clean_excel,
@@ -16,7 +16,7 @@ from download_10k_utils import (clean_excel,
 from sec_downloader import SECDownloader, download
 
 app = FastAPI()
-app.add_middleware(PyInstrumentProfilerMiddleware)
+# app.add_middleware(PyInstrumentProfilerMiddleware)
 
 sec_downloader = SECDownloader()
 
@@ -42,7 +42,7 @@ async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
 
         existing_s3_urls = download_ticker_folder_from_s3(
             ticker,  ticker_folder)
-        created_fpath = create_files(ticker, ticker_folder, cik, years)
+        created_fpath = create_missing_files(ticker, ticker_folder, cik, years)
         fpaths_to_send_to_user = filter_fpaths_to_send(
             created_fpath, raw_files_to_send, merged_files_to_send)
         s3_urls = upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls)
@@ -50,10 +50,14 @@ async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
         return {"s3_urls": s3_urls}
 
 
-def create_files(ticker, ticker_folder, cik, years):
+def create_missing_files(ticker, ticker_folder, cik, years):
 
     missing_years = get_missing_years(ticker_folder, years)
     if missing_years:
+        for year in missing_years:
+            year_folder = os.path.join(ticker_folder, year)
+            os.makedirs(year_folder, exist_ok=True)
+
         excel_fpaths_to_clean = download(ticker, cik, missing_years,
                                          ticker_folder)
         for excel_fpath in excel_fpaths_to_clean:
