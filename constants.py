@@ -1,7 +1,6 @@
 CIK_URL = ("http://www.sec.gov/cgi-bin/browse-edgar?CIK={}&Find=Search&owner"
            "=exclude&action=getcompany")
 BASE_URL = "http://www.sec.gov/cgi-bin/browse-edgar"
-BASE_EDGAR_URL = "https://www.sec.gov/Archives/edgar/data"
 DEFAULT_FOLDER = "DEFAULT_FOLDER"
 
 REGEX_PER_TARGET_SHEET = {
@@ -10,11 +9,6 @@ REGEX_PER_TARGET_SHEET = {
 	"cash": ["cash"]
 }
 
-MAP_SEC_REGEX = {
-	"10-K": ("10-k", "10k"),
-	"10-K/A": ("htm", "10-ka"),
-	"DEF 14A": ("", "")
-}
 MAP_SEC_PREFIX = {
 	"10-K": "10K",
 	"10-K/A": "10K_amended",

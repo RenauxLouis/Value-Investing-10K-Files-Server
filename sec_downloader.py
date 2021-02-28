@@ -5,10 +5,10 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from constants import (_10K_FILING_TYPE, BASE_EDGAR_URL, BASE_URL,
-                       MAP_SEC_PREFIX, MAP_SEC_REGEX,
-                       PROXY_STATEMENT_FILING_TYPE, SEC_CIK_TXT_URL,
-                       TICKER_CIK_CSV_FPATH, HTM_EXT, XLSX_EXT)
+from constants import (_10K_FILING_TYPE, BASE_URL,
+                       MAP_SEC_PREFIX, PROXY_STATEMENT_FILING_TYPE,
+                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, HTM_EXT,
+                       XLSX_EXT)
 
 session = requests.Session()
 
@@ -55,7 +55,7 @@ def update_ticker_cik_df():
 
 def download(ticker, cik, years, ticker_folder):
 
-    _10k_urls = get_urls(
+    _10k_urls = get_folders_urls(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
     fiscal_years = []
@@ -67,26 +67,24 @@ def download(ticker, cik, years, ticker_folder):
             fiscal_years.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
 
-            accession_number = index_url.split("/")[-2]
-            htm_regex = MAP_SEC_REGEX[_10K_FILING_TYPE]
-            file_url = get_file_url(cik, accession_number, HTM_EXT, *htm_regex)
+            _10k_url = get_file_url(index_url, _10K_FILING_TYPE)
 
             prefix = MAP_SEC_PREFIX[_10K_FILING_TYPE]
             download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
-                                   file_url, year_folder)
+                                   _10k_url, year_folder)
 
-            xslx_regex = ("financial_report", "financial_report")
-            file_url = get_file_url(cik, accession_number,
-                                    XLSX_EXT, *xslx_regex)
-            excel_fpath = download_file_from_url(
-                prefix, fiscal_year, XLSX_EXT, ticker, file_url, year_folder)
+            _10k_xslx_url = os.path.join(
+                os.path.dirname(index_url), "Financial_Report.xlsx")
+            excel_fpath = download_file_from_url(prefix, fiscal_year,
+                                                 XLSX_EXT,ticker,
+                                                 _10k_xslx_url, year_folder)
             excel_fpaths.append(excel_fpath)
 
         # Files from all requested years have been downloaded
         if set(fiscal_years) == set(years):
             break
 
-    proxy_statements_urls = get_urls(
+    proxy_statements_urls = get_folders_urls(
         filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
     fiscal_years = []
     for index_url in proxy_statements_urls:
@@ -97,15 +95,11 @@ def download(ticker, cik, years, ticker_folder):
             fiscal_years.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
 
-            accession_number = index_url.split("/")[-2]
-
-            proxy_regex = MAP_SEC_REGEX[PROXY_STATEMENT_FILING_TYPE]
-            file_url = get_file_url(cik, accession_number,
-                                    HTM_EXT, *proxy_regex)
+            proxy_url = get_file_url(index_url, PROXY_STATEMENT_FILING_TYPE)
 
             prefix = MAP_SEC_PREFIX[PROXY_STATEMENT_FILING_TYPE]
             download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
-                                   file_url, year_folder)
+                                   proxy_url, year_folder)
 
         # Files from all requested years have been downloaded
         if set(fiscal_years) == set(years):
@@ -114,7 +108,7 @@ def download(ticker, cik, years, ticker_folder):
     return excel_fpaths
 
 
-def get_urls(filing_type, years, cik):
+def get_folders_urls(filing_type, years, cik):
 
     last_year_param = str(int(years[-1]) + 1) + "1231"
 
@@ -162,11 +156,9 @@ def get_fiscal_year(index_url):
     return fiscal_year
 
 
-def get_file_url(cik, accession_number, ext, if_1, if_2):
+def get_file_url(index_url, filing_type):
 
-    accession_number_url = os.path.join(
-        BASE_EDGAR_URL, cik, accession_number).replace("\\", "/")
-    with session.get(accession_number_url) as r:
+    with session.get(index_url) as r:
         status_code = r.status_code
         if status_code == 200:
             data = r.text
@@ -174,23 +166,20 @@ def get_file_url(cik, accession_number, ext, if_1, if_2):
             print("Error when request:", status_code)
 
     soup = BeautifulSoup(data, features="lxml")
-    links = [link.get("href") for link in soup.findAll("a")]
+    tables = soup.find_all("table", {"class": "tableFile"})
+    df_table = pd.read_html(str(tables[0]))[0]
+    df_filetype = df_table.loc[df_table["Type"] == filing_type].copy()
+    df_filetype_htm = df_filetype.loc[df_filetype[
+        "Document"].str.contains(".htm")].copy()
 
-    corresponding_file_extension = [link for link in links if (
-            os.path.splitext(link)[-1] == ext)]
-    urls = [link for link in corresponding_file_extension if (
-            if_1 in link.lower() or if_2 in link.lower())]
-    urls_accession_num = [url for url in urls if accession_number in url]
+    fnames = df_filetype_htm.Document.values
+    assert len(fnames) == 1
+    fname = fnames[0]
+    cleaned_fname = fname.split(".htm")[0] + ".htm"
 
-    if not urls_accession_num:
-        # Get first htm url with accession_number
-        urls_accession_num = [
-            link for link in links if (os.path.splitext(link)[-1] == ext
-                                       and accession_number in link)]
-    fname = os.path.basename(urls_accession_num[0])
-    url = os.path.join(accession_number_url, fname).replace("\\", "/")
+    file_url = os.path.join(os.path.dirname(index_url), cleaned_fname)
 
-    return url
+    return file_url
 
 
 def download_file_from_url(prefix, year, ext, ticker, file_url, year_folder):

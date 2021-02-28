@@ -2,7 +2,6 @@ import os
 from tempfile import TemporaryDirectory
 
 from fastapi import FastAPI
-# from fastapi_profiler.profiler_middleware import PyInstrumentProfilerMiddleware
 
 from constants import DEFAULT_FOLDER
 from download_10k_utils import (clean_excel,
@@ -16,14 +15,8 @@ from download_10k_utils import (clean_excel,
 from sec_downloader import SECDownloader, download
 
 app = FastAPI()
-# app.add_middleware(PyInstrumentProfilerMiddleware)
 
 sec_downloader = SECDownloader()
-
-
-# @app.get("/")
-# def read_root():
-#     return {"Hello": "World"}
 
 
 @app.get("/params/")
