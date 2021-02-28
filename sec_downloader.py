@@ -59,8 +59,8 @@ def download(ticker, cik, years, ticker_folder):
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
     fiscal_years = []
+    print("Download 10K Forms")
     for index_url in _10k_urls:
-        print("Download 10K Forms")
         print(index_url)
 
         fiscal_year = get_fiscal_year(index_url)
@@ -89,8 +89,8 @@ def download(ticker, cik, years, ticker_folder):
     proxy_statements_urls = get_folders_urls(
         filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
     fiscal_years = []
+    print("Download Proxy Statements")
     for index_url in proxy_statements_urls:
-        print("Download Proxy Statements")
         print(index_url)
 
         fiscal_year = get_fiscal_year(index_url)
