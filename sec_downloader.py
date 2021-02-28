@@ -58,14 +58,14 @@ def download(ticker, cik, years, ticker_folder):
     _10k_urls = get_folders_urls(
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
-    fiscal_years = []
+    fiscal_years_10k = []
     print("Download 10K Forms")
     for index_url in _10k_urls:
 
         fiscal_year = get_fiscal_year(index_url)
 
         if fiscal_year in years:
-            fiscal_years.append(fiscal_year)
+            fiscal_years_10k.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
 
             _10k_url = get_file_url(index_url, _10K_FILING_TYPE)
@@ -77,26 +77,24 @@ def download(ticker, cik, years, ticker_folder):
             _10k_xslx_url = os.path.join(
                 os.path.dirname(index_url), "Financial_Report.xlsx")
             excel_fpath = download_file_from_url(prefix, fiscal_year,
-                                                 XLSX_EXT,ticker,
+                                                 XLSX_EXT, ticker,
                                                  _10k_xslx_url, year_folder)
             excel_fpaths.append(excel_fpath)
 
         # Files from all requested years have been downloaded
-        if set(fiscal_years) == set(years):
+        if set(fiscal_years_10k) == set(years):
             break
-    else:
-        print()
 
     proxy_statements_urls = get_folders_urls(
         filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
-    fiscal_years = []
+    fiscal_years_proxy = []
     print("Download Proxy Statements")
     for index_url in proxy_statements_urls:
 
         fiscal_year = get_fiscal_year(index_url)
 
         if fiscal_year in years:
-            fiscal_years.append(fiscal_year)
+            fiscal_years_proxy.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
 
             proxy_url = get_file_url(index_url, PROXY_STATEMENT_FILING_TYPE)
@@ -106,10 +104,10 @@ def download(ticker, cik, years, ticker_folder):
                                    proxy_url, year_folder)
 
         # Files from all requested years have been downloaded
-        if set(fiscal_years) == set(years):
+        if set(fiscal_years_proxy) == set(years):
             break
 
-    return excel_fpaths
+    return excel_fpaths, fiscal_years_10k
 
 
 def get_folders_urls(filing_type, years, cik):

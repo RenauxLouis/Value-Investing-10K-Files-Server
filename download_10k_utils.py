@@ -190,15 +190,14 @@ def create_merged_df(sheet_per_year, writer, format1):
         worksheet.set_column(idx, idx, max_len)
 
 
-def get_missing_years(ticker_folder, years):
+def get_existing_years(ticker_folder):
 
-    if not os.path.exists(ticker_folder):
-        return years
-
-    years_folders = os.listdir(ticker_folder)
-    missing_years = [year for year in years if year not in years_folders]
-
-    return missing_years
+    if os.path.exists(ticker_folder):
+        ticker_folder_content = os.listdir(ticker_folder)
+        years_folders = [item for item in ticker_folder_content
+                         if os.path.isdir(os.path.join(ticker_folder, item))]
+        return years_folders
+    return []
 
 
 def get_fpaths_from_local_ticker(ticker_folder, years):
