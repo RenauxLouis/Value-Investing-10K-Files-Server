@@ -287,12 +287,12 @@ def get_first_matching(titles, targets):
     return title
 
 
-def upload_files_to_s3(fpaths_to_send_to_user, existing_s3_urls):
+def upload_files_to_s3(created_fpaths, existing_s3_urls):
 
     s3_client = boto3.client("s3")
 
     s3_urls = []
-    for fpath in fpaths_to_send_to_user:
+    for fpath in created_fpaths:
         s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
         s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
         if s3_url not in existing_s3_urls:
@@ -342,8 +342,8 @@ def download_ticker_folder_from_s3(ticker, ticker_folder):
     return existing_s3_urls
 
 
-def filter_fpaths_to_send(fpaths_to_send_to_user, raw_files_to_send,
-                          merged_files_to_send):
+def filter_s3_urls_to_send(s3_urls_to_send_to_user, raw_files_to_send,
+                           merged_files_to_send):
 
     raw_files_to_remove = [file_type for file_type, select in
                            raw_files_to_send.items() if not select]
@@ -351,10 +351,10 @@ def filter_fpaths_to_send(fpaths_to_send_to_user, raw_files_to_send,
                               merged_files_to_send.items() if not select]
 
     for file_regex in raw_files_to_remove:
-        fpaths_to_send_to_user = [file for file in fpaths_to_send_to_user
-                                  if file_regex not in file.lower()]
+        s3_urls_to_send_to_user = [file for file in s3_urls_to_send_to_user
+                                   if file_regex not in file.lower()]
     for file_regex in merged_files_to_remove:
-        fpaths_to_send_to_user = [file for file in fpaths_to_send_to_user
-                                  if file_regex not in file.lower()]
+        s3_urls_to_send_to_user = [file for file in s3_urls_to_send_to_user
+                                   if file_regex not in file.lower()]
 
-    return fpaths_to_send_to_user
+    return s3_urls_to_send_to_user
