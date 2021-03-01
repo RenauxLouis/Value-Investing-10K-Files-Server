@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from constants import DEFAULT_FOLDER
 from download_10k_utils import (clean_excel,
-                                download_ticker_folder_from_s3,
+                                download_years_in_ticker_folder_from_s3,
                                 filter_s3_urls_to_send,
                                 get_existing_merged_fpaths,
                                 get_fpaths_from_local_ticker,
@@ -33,8 +33,8 @@ async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
         ticker_folder = os.path.join(dirpath, DEFAULT_FOLDER, ticker)
         os.makedirs(ticker_folder)
 
-        existing_s3_urls = download_ticker_folder_from_s3(
-            ticker,  ticker_folder)
+        existing_s3_urls = download_years_in_ticker_folder_from_s3(
+            ticker,  ticker_folder, years)
         created_fpath = create_missing_files(ticker, ticker_folder, cik, years)
         s3_urls = upload_files_to_s3(created_fpath, existing_s3_urls)
 

@@ -322,13 +322,18 @@ def parse_inputs(get10k, getProxyStatement, getBalanceSheet,
     return raw_files_to_send, merged_files_to_send, years
 
 
-def download_ticker_folder_from_s3(ticker, ticker_folder):
+def download_years_in_ticker_folder_from_s3(ticker, ticker_folder, years):
 
     s3_resource = boto3.resource("s3")
     bucket = s3_resource.Bucket(TICKERS_10K_S3_BUCKET)
+    s3_objects = bucket.objects.filter(Prefix=ticker)
 
     existing_s3_urls = []
-    for s3_obj in bucket.objects.filter(Prefix=ticker):
+    for s3_obj in s3_objects:
+        s3_folder = s3_obj.key.split("/")[1]
+        if s3_folder not in years:
+            continue
+
         s3_url = os.path.join("s3://", s3_obj.bucket_name, s3_obj.key)
         existing_s3_urls.append(s3_url)
 
