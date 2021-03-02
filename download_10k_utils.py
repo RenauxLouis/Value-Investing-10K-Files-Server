@@ -81,18 +81,13 @@ def get_xslx_years(ticker_folder):
 
     xlsx_years = []
     for year in years:
-        print(year)
         year_folder = os.path.join(ticker_folder, year)
         year_folder_content = os.listdir(year_folder)
-        print(year_folder_content)
         year_folder_content_fext = [os.path.splitext(item)[1]
                                     for item in year_folder_content]
-        print(year_folder_content_fext)
         if ".xlsx" in year_folder_content_fext:
-            print(f"year {year} added")
             xlsx_years.append(year)
 
-    print(xlsx_years)
     return xlsx_years
 
 
