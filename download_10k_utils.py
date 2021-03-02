@@ -23,6 +23,9 @@ session.mount("https://", adapter)
 def merge_excel_files_across_years(ticker, ticker_folder):
 
     years = get_xslx_years(ticker_folder)
+    if not years:
+        return []
+
     merged_fnames_map = get_merged_fnames_map(ticker, years)
     excel_fpath_per_year = get_local_excel_fpath_per_year(ticker_folder, years)
     sheet_per_year_per_target = get_sheets_per_year_per_target(
