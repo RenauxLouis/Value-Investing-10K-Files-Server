@@ -59,7 +59,6 @@ def download(ticker, cik, years, ticker_folder):
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
     fiscal_years_10k = []
-    local_years_with_xlsx = []
     print("Download 10K Forms")
     for index_url in _10k_urls:
 
@@ -83,7 +82,6 @@ def download(ticker, cik, years, ticker_folder):
                                                  XLSX_EXT, ticker,
                                                  _10k_xslx_url, year_folder)
             if excel_fpath:
-                local_years_with_xlsx.append(fiscal_year)
                 excel_fpaths.append(excel_fpath)
 
         # Files from all requested years have been downloaded
@@ -113,7 +111,7 @@ def download(ticker, cik, years, ticker_folder):
         if set(fiscal_years_proxy) == set(years):
             break
 
-    return excel_fpaths, fiscal_years_10k, local_years_with_xlsx
+    return excel_fpaths, fiscal_years_10k
 
 
 def get_folders_urls(filing_type, years, cik):
