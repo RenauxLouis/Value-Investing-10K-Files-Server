@@ -66,8 +66,10 @@ def download(ticker, cik, years, ticker_folder):
         fiscal_year = get_fiscal_year(index_url)
 
         if fiscal_year in years:
+
             fiscal_years_10k.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
+            os.makedirs(year_folder, exist_ok=True)
 
             _10k_url = get_file_url(index_url, _10K_FILING_TYPE)
 
@@ -99,6 +101,7 @@ def download(ticker, cik, years, ticker_folder):
         if fiscal_year in years:
             fiscal_years_proxy.append(fiscal_year)
             year_folder = os.path.join(ticker_folder, fiscal_year)
+            os.makedirs(year_folder, exist_ok=True)
 
             proxy_url = get_file_url(index_url, PROXY_STATEMENT_FILING_TYPE)
 

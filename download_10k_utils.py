@@ -20,8 +20,9 @@ session.mount("http://", adapter)
 session.mount("https://", adapter)
 
 
-def merge_excel_files_across_years(ticker, ticker_folder, years):
+def merge_excel_files_across_years(ticker, ticker_folder):
 
+    years = get_xslx_years(ticker_folder)
     merged_fnames_map = get_merged_fnames_map(ticker, years)
     excel_fpath_per_year = get_local_excel_fpath_per_year(ticker_folder, years)
     sheet_per_year_per_target = get_sheets_per_year_per_target(
@@ -68,6 +69,13 @@ def merge_excel_files_across_years(ticker, ticker_folder, years):
             create_merged_df(sheet_per_year, writer, dollar_format)
 
     return merged_fpaths
+
+
+def get_xslx_years(ticker_folder):
+    content = os.listdir(ticker_folder)
+    xslx_years = [item for item in content
+                  if os.path.isdir(os.path.join(ticker_folder, item)]
+    return xslx_years
 
 
 def get_sheets_per_year_per_target(excel_fpath_per_year):
