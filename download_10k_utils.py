@@ -255,8 +255,10 @@ def get_existing_merged_fpaths(ticker, ticker_folder, years):
 
 def get_merged_fnames_map(ticker, years):
 
-    first_year = years[0]
-    last_year = years[-1]
+    ordered_years = [str(year_int) for year_int in
+                     sorted([int(year) for year in years])]
+    first_year = ordered_years[0]
+    last_year = ordered_years[-1]
     merged_fnames_map = {
         "balance sheet": f"{ticker} Balance Sheet {first_year}-{last_year}"
                          ".xlsx",
