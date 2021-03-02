@@ -88,7 +88,7 @@ def get_xslx_years(ticker_folder):
         year_folder_content_fext = [os.path.splitext(item)[1]
                                     for item in year_folder_content]
         print(year_folder_content_fext)
-        if ".xslx" in year_folder_content_fext:
+        if ".xlsx" in year_folder_content_fext:
             xlsx_years.append(year)
 
     return xlsx_years
