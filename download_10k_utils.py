@@ -74,7 +74,7 @@ def merge_excel_files_across_years(ticker, ticker_folder):
 def get_xslx_years(ticker_folder):
     content = os.listdir(ticker_folder)
     xslx_years = [item for item in content
-                  if os.path.isdir(os.path.join(ticker_folder, item)]
+                  if os.path.isdir(os.path.join(ticker_folder, item))]
     return xslx_years
 
 
