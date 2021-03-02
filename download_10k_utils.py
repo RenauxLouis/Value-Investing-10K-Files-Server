@@ -76,11 +76,19 @@ def merge_excel_files_across_years(ticker, ticker_folder):
 
 def get_xslx_years(ticker_folder):
     content = os.listdir(ticker_folder)
-    xslx_years = [item for item in content
-                  if (os.path.isdir(os.path.join(ticker_folder, item))
-                      and ".xslx" in os.listdir(os.path.join(ticker_folder,
-                                                             item)))]
-    return xslx_years
+    years = [item for item in content
+             if os.path.isdir(os.path.join(ticker_folder, item))]
+
+    xlsx_years = []
+    for year in years:
+        year_folder = os.path.join(ticker_folder, year)
+        year_folder_content = os.listdir(year_folder)
+        year_folder_content_fext = [os.path.splitext(item)[1]
+                                    for item in year_folder_content]
+        if ".xslx" in year_folder_content_fext:
+            xlsx_years.append(year)
+
+    return xlsx_years
 
 
 def get_sheets_per_year_per_target(excel_fpath_per_year):
