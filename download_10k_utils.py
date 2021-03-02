@@ -179,8 +179,8 @@ def create_merged_df(sheet_per_year, writer, format1):
     worksheet.set_column(1, 10, cell_format=format1)
 
     # Adjust columns
-    for idx, col in enumerate(merged_df):
-        series = merged_df[col]
+    for idx, _ in enumerate(merged_df):
+        series = merged_df.iloc[:, idx]
         max_len = max((
             # len of largest item
             series.astype(str).map(len).max(),
@@ -256,7 +256,6 @@ def get_local_excel_fpath_per_year(ticker_folder, years):
 
 
 def clean_excel(excel_fpath):
-
     df_per_sheet = read_excel(excel_fpath, sheet_name=None)
 
     sheet_name_per_title = {}
