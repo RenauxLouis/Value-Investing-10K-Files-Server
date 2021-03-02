@@ -194,6 +194,6 @@ def download_file_from_url(prefix, year, ext, ticker, file_url, year_folder):
             with open(fpath, "wb") as output:
                 output.write(r.content)
         else:
-            raise Exception(f"Wrong status code: {status_code}")
+            raise Exception(f"Wrong status code: {status_code} when requesting {file_url}")
 
     return fpath
