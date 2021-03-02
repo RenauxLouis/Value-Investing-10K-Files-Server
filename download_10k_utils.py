@@ -75,7 +75,8 @@ def get_xslx_years(ticker_folder):
     content = os.listdir(ticker_folder)
     xslx_years = [item for item in content
                   if (os.path.isdir(os.path.join(ticker_folder, item))
-                      and ".xslx" in os.listdir(item))]
+                      and ".xslx" in os.listdir(os.path.join(ticker_folder,
+                                                             item)))]
     return xslx_years
 
 
