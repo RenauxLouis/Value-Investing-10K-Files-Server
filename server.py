@@ -54,7 +54,7 @@ def create_missing_files(ticker, ticker_folder, cik, years):
             year_folder = os.path.join(ticker_folder, year)
             os.makedirs(year_folder, exist_ok=True)
 
-        excel_fpaths_to_clean, created_years = download(
+        excel_fpaths_to_clean, created_years, local_years_with_xlsx = download(
             ticker, cik, missing_years, ticker_folder)
         for excel_fpath in excel_fpaths_to_clean:
             clean_excel(excel_fpath)
@@ -69,7 +69,7 @@ def create_missing_files(ticker, ticker_folder, cik, years):
         merged_fpaths = existing_merged_fpaths
     else:
         merged_fpaths = merge_excel_files_across_years(
-            ticker, ticker_folder, local_years)
+            ticker, ticker_folder, local_years_with_xlsx)
 
     raw_fpaths = get_fpaths_from_local_ticker(ticker_folder, local_years)
     created_fpath = raw_fpaths + merged_fpaths

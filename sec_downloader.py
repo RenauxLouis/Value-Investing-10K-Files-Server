@@ -59,6 +59,7 @@ def download(ticker, cik, years, ticker_folder):
         filing_type=_10K_FILING_TYPE, years=years, cik=cik)
     excel_fpaths = []
     fiscal_years_10k = []
+    local_years_with_xlsx = []
     print("Download 10K Forms")
     for index_url in _10k_urls:
 
@@ -79,7 +80,9 @@ def download(ticker, cik, years, ticker_folder):
             excel_fpath = download_file_from_url(prefix, fiscal_year,
                                                  XLSX_EXT, ticker,
                                                  _10k_xslx_url, year_folder)
-            excel_fpaths.append(excel_fpath)
+            if excel_fpath:
+                local_years_with_xlsx.append(fiscal_year)
+                excel_fpaths.append(excel_fpath)
 
         # Files from all requested years have been downloaded
         if set(fiscal_years_10k) == set(years):
@@ -107,7 +110,7 @@ def download(ticker, cik, years, ticker_folder):
         if set(fiscal_years_proxy) == set(years):
             break
 
-    return excel_fpaths, fiscal_years_10k
+    return excel_fpaths, fiscal_years_10k, local_years_with_xlsx
 
 
 def get_folders_urls(filing_type, years, cik):
@@ -193,7 +196,7 @@ def download_file_from_url(prefix, year, ext, ticker, file_url, year_folder):
                 year_folder, f"{ticker.upper()}_{prefix}_{year}{ext}")
             with open(fpath, "wb") as output:
                 output.write(r.content)
+            return fpath
         else:
-            raise Exception(f"Wrong status code: {status_code} when requesting {file_url}")
-
-    return fpath
+            print(f"Wrong status code: {status_code} when requesting {file_url}")
+            return None
