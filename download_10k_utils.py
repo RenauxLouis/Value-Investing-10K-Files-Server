@@ -158,14 +158,11 @@ def create_merged_df(sheet_per_year, writer, format1):
     # Clean columns of all sheets
     sheet_per_year = clean_columns_df(sheet_per_year)
 
-    ordered_sheets = list(sheet_per_year.values())
     merged_df = reduce(
         lambda left, right: merge(
             left, right, left_on=left.columns[0],
             right_on=right.columns[0], how="inner"),
-        ordered_sheets)
-    
-    print(len(merged_df))
+        list(sheet_per_year.values()))
 
     # Keep one column per year
     clean_cols = []
