@@ -69,7 +69,7 @@ def merge_excel_files_across_years(ticker, ticker_folder):
                     max_len = min(max_len, default_max_length)
                     worksheet.set_column(idx, idx, max_len)
 
-            create_merged_df(sheet_per_year, writer, dollar_format)
+            #create_merged_df(sheet_per_year, writer, dollar_format)
 
     return merged_fpaths
 
@@ -155,11 +155,15 @@ def create_merged_df(sheet_per_year, writer, format1):
 
     # Clean columns of all sheets
     sheet_per_year = clean_columns_df(sheet_per_year)
+
+    ordered_sheets = list(sheet_per_year.values())
     merged_df = reduce(
         lambda left, right: merge(
             left, right, left_on=left.columns[0],
-            right_on=right.columns[0], how="outer"),
-        list(sheet_per_year.values()))
+            right_on=right.columns[0], how="inner"),
+        ordered_sheets)
+    
+    print(len(merged_df))
 
     # Keep one column per year
     clean_cols = []
@@ -186,12 +190,12 @@ def create_merged_df(sheet_per_year, writer, format1):
         else:
             drop_col.append(col)
     merged_df = merged_df.drop(columns=drop_col)
-
     merged_df = merged_df.drop_duplicates()
 
     years_as_int = [int(year) for year in sheet_per_year.keys()]
     last_year = max(years_as_int)
     first_year = min(years_as_int)
+    
     merged_sheet_name = str(last_year) + "-" + str(first_year)
     merged_df.to_excel(
         writer, sheet_name=merged_sheet_name, index=False)
