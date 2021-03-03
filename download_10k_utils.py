@@ -20,7 +20,11 @@ session.mount("http://", adapter)
 session.mount("https://", adapter)
 
 
-def merge_excel_files_across_years(ticker, ticker_folder, years):
+def merge_excel_files_across_years(ticker, ticker_folder):
+
+    years = get_xslx_years(ticker_folder)
+    if not years:
+        return []
 
     merged_fnames_map = get_merged_fnames_map(ticker, years)
     excel_fpath_per_year = get_local_excel_fpath_per_year(ticker_folder, years)
@@ -36,7 +40,9 @@ def merge_excel_files_across_years(ticker, ticker_folder, years):
             workbook = writer.book
             dollar_format = workbook.add_format({"num_format": "$#,##0.00"})
 
-            for year, sheet in sheet_per_year.items():
+            ordered_years = [str(year_str) for year_str in sorted([int(year) for year in sheet_per_year.keys()])]
+            for year in ordered_years:
+                sheet = sheet_per_year[year]
                 sheet_name = year
                 clean_columns = [col.replace(
                     "Unnamed: ", "") for col in sheet.columns]
@@ -65,9 +71,26 @@ def merge_excel_files_across_years(ticker, ticker_folder, years):
                     max_len = min(max_len, default_max_length)
                     worksheet.set_column(idx, idx, max_len)
 
-            create_merged_df(sheet_per_year, writer, dollar_format)
+            #create_merged_df(sheet_per_year, writer, dollar_format)
 
     return merged_fpaths
+
+
+def get_xslx_years(ticker_folder):
+    content = os.listdir(ticker_folder)
+    years = [item for item in content
+             if os.path.isdir(os.path.join(ticker_folder, item))]
+
+    xlsx_years = []
+    for year in years:
+        year_folder = os.path.join(ticker_folder, year)
+        year_folder_content = os.listdir(year_folder)
+        year_folder_content_fext = [os.path.splitext(item)[1]
+                                    for item in year_folder_content]
+        if ".xlsx" in year_folder_content_fext:
+            xlsx_years.append(year)
+
+    return xlsx_years
 
 
 def get_sheets_per_year_per_target(excel_fpath_per_year):
@@ -134,10 +157,11 @@ def create_merged_df(sheet_per_year, writer, format1):
 
     # Clean columns of all sheets
     sheet_per_year = clean_columns_df(sheet_per_year)
+
     merged_df = reduce(
         lambda left, right: merge(
             left, right, left_on=left.columns[0],
-            right_on=right.columns[0], how="outer"),
+            right_on=right.columns[0], how="inner"),
         list(sheet_per_year.values()))
 
     # Keep one column per year
@@ -165,12 +189,12 @@ def create_merged_df(sheet_per_year, writer, format1):
         else:
             drop_col.append(col)
     merged_df = merged_df.drop(columns=drop_col)
-
     merged_df = merged_df.drop_duplicates()
 
     years_as_int = [int(year) for year in sheet_per_year.keys()]
     last_year = max(years_as_int)
     first_year = min(years_as_int)
+    
     merged_sheet_name = str(last_year) + "-" + str(first_year)
     merged_df.to_excel(
         writer, sheet_name=merged_sheet_name, index=False)
@@ -229,8 +253,10 @@ def get_existing_merged_fpaths(ticker, ticker_folder, years):
 
 def get_merged_fnames_map(ticker, years):
 
-    first_year = years[0]
-    last_year = years[-1]
+    ordered_years = [str(year_int) for year_int in
+                     sorted([int(year) for year in years])]
+    first_year = ordered_years[0]
+    last_year = ordered_years[-1]
     merged_fnames_map = {
         "balance sheet": f"{ticker} Balance Sheet {first_year}-{last_year}"
                          ".xlsx",
