@@ -40,7 +40,9 @@ def merge_excel_files_across_years(ticker, ticker_folder):
             workbook = writer.book
             dollar_format = workbook.add_format({"num_format": "$#,##0.00"})
 
-            for year, sheet in sheet_per_year.items():
+            ordered_years = [str(year_str) for year_str in sorted([int(year) for year in sheet_per_year.keys()])]
+            for year in ordered_years:
+                sheet = sheet_per_year[year]
                 sheet_name = year
                 clean_columns = [col.replace(
                     "Unnamed: ", "") for col in sheet.columns]
