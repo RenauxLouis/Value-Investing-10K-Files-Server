@@ -1,7 +1,6 @@
 CIK_URL = ("http://www.sec.gov/cgi-bin/browse-edgar?CIK={}&Find=Search&owner"
            "=exclude&action=getcompany")
 BASE_URL = "http://www.sec.gov/cgi-bin/browse-edgar"
-DEFAULT_FOLDER = "DEFAULT_FOLDER"
 
 REGEX_PER_TARGET_SHEET = {
 	"balance sheet": ["balance sheet", "financial position"],

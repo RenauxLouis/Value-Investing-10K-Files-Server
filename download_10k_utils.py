@@ -10,8 +10,7 @@ from pandas import ExcelWriter, merge, read_excel
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from constants import (DEFAULT_FOLDER,  REGEX_PER_TARGET_SHEET,
-                       TICKERS_10K_S3_BUCKET)
+from constants import REGEX_PER_TARGET_SHEET, TICKERS_10K_S3_BUCKET
 
 session = requests.Session()
 retry = Retry(connect=3, backoff_factor=0.5)
@@ -309,13 +308,13 @@ def get_first_matching(titles, targets):
     return title
 
 
-def upload_files_to_s3(created_fpaths, existing_s3_urls):
+def upload_files_to_s3(created_fpaths, existing_s3_urls, ticker, ticker_folder):
 
     s3_client = boto3.client("s3")
 
     s3_urls = []
     for fpath in created_fpaths:
-        s3_prefix = fpath.split(DEFAULT_FOLDER + "/")[1]
+        s3_prefix = os.path.join(ticker, fpath.split(ticker_folder + "/")[1])
         s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
         if s3_url not in existing_s3_urls:
             s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
