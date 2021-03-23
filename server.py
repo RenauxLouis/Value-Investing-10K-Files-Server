@@ -4,6 +4,7 @@ import shutil
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from download_10k_utils import (clean_excel,
                                 download_years_in_ticker_folder_from_s3,
@@ -16,6 +17,8 @@ from download_10k_utils import (clean_excel,
 from sec_downloader import SECDownloader, download
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+                   allow_methods=["*"], allow_headers=["*"])
 
 sec_downloader = SECDownloader()
 
