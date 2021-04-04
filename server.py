@@ -17,8 +17,8 @@ from download_10k_utils import (clean_excel,
                                 get_existing_years,
                                 merge_excel_files_across_years, parse_inputs,
                                 upload_files_to_s3)
-from sec_downloader import SECDownloader, download
-from constants import SEC_CIK_TXT_URL
+from sec_downloader import SECDownloader, download, update_ticker_cik_df()
+from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH
 
 session = requests.Session()
 retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
@@ -37,14 +37,10 @@ sec_downloader = SECDownloader()
 @app.get("/list_sec/")
 async def get_list_sec_tickers():
 
-    with session.get(SEC_CIK_TXT_URL) as r:
-        if r.status_code != 200:
-            print(r.status_code)
-            sys.exit("Ticker data not found when pulling filing_type: "
-                     f"{filing_type}")
-        data = r.text
-    print(data)
-    list_tickers = []
+    update_ticker_cik_df()
+    df_tickers = pd.read_csv(TICKER_CIK_CSV_FPATH)
+
+    list_tickers = df_tickers["ticker"].values
     return list_tickers
 
 
