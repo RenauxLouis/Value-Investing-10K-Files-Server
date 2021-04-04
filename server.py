@@ -17,7 +17,7 @@ from download_10k_utils import (clean_excel,
                                 get_existing_years,
                                 merge_excel_files_across_years, parse_inputs,
                                 upload_files_to_s3)
-from sec_downloader import SECDownloader, download, update_ticker_cik_df()
+from sec_downloader import SECDownloader, download, update_ticker_cik_df
 from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH
 
 session = requests.Session()
