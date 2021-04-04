@@ -3,14 +3,13 @@ import sys
 
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from constants import (_10K_FILING_TYPE, BASE_URL,
-                       MAP_SEC_PREFIX, PROXY_STATEMENT_FILING_TYPE,
-                       SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, HTM_EXT,
-                       XLSX_EXT)
+from bs4 import BeautifulSoup
+from constants import (_10K_FILING_TYPE, BASE_URL, HTM_EXT, MAP_SEC_PREFIX,
+                       PROXY_STATEMENT_FILING_TYPE, SEC_CIK_TXT_URL,
+                       TICKER_CIK_CSV_FPATH, XLSX_EXT)
 
 session = requests.Session()
 retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)

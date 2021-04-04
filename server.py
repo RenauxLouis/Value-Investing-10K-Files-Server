@@ -1,24 +1,24 @@
 import os
-from tempfile import TemporaryDirectory
 import shutil
+from tempfile import TemporaryDirectory
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH
 from download_10k_utils import (clean_excel,
                                 download_years_in_ticker_folder_from_s3,
                                 filter_s3_urls_to_send,
-                                get_existing_merged_fpaths,
+                                get_existing_merged_fpaths, get_existing_years,
                                 get_fpaths_from_local_ticker,
-                                get_existing_years,
                                 merge_excel_files_across_years, parse_inputs,
                                 upload_files_to_s3)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sec_downloader import SECDownloader, download, update_ticker_cik_df
-from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH
 
 session = requests.Session()
 retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
