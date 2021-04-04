@@ -13,7 +13,7 @@ from requests.packages.urllib3.util.retry import Retry
 from constants import REGEX_PER_TARGET_SHEET, TICKERS_10K_S3_BUCKET
 
 session = requests.Session()
-retry = Retry(connect=3, backoff_factor=0.5)
+retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
 adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
@@ -193,7 +193,7 @@ def create_merged_df(sheet_per_year, writer, format1):
     years_as_int = [int(year) for year in sheet_per_year.keys()]
     last_year = max(years_as_int)
     first_year = min(years_as_int)
-    
+
     merged_sheet_name = str(last_year) + "-" + str(first_year)
     merged_df.to_excel(
         writer, sheet_name=merged_sheet_name, index=False)

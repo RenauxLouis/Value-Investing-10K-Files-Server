@@ -4,6 +4,8 @@ import sys
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from constants import (_10K_FILING_TYPE, BASE_URL,
                        MAP_SEC_PREFIX, PROXY_STATEMENT_FILING_TYPE,
@@ -11,6 +13,10 @@ from constants import (_10K_FILING_TYPE, BASE_URL,
                        XLSX_EXT)
 
 session = requests.Session()
+retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 
 class SECDownloader():
@@ -124,6 +130,7 @@ def get_folders_urls(filing_type, years, cik):
 
     with session.get(BASE_URL, params=params) as r:
         if r.status_code != 200:
+            print(r.status_code)
             sys.exit("Ticker data not found when pulling filing_type: "
                      f"{filing_type}")
 
