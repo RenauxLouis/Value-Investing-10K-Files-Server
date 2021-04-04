@@ -41,7 +41,7 @@ async def get_list_sec_tickers():
     df_tickers = pd.read_csv(TICKER_CIK_CSV_FPATH)
 
     list_tickers = list(df_tickers["ticker"].values)
-    print([ticker for ticker in list_ticker if not isinstance(ticker, str)])
+    print([ticker for ticker in list_tickers if not isinstance(ticker, str)])
     return {"tickers": list_tickers}
 
 
