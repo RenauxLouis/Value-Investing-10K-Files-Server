@@ -37,7 +37,7 @@ sec_downloader = SECDownloader()
 @app.get("/list_sec/")
 async def get_list_sec_tickers():
 
-    with session.get(SEC_TICKERS_LIST_URL) as r:
+    with session.get(SEC_CIK_TXT_URL) as r:
         if r.status_code != 200:
             print(r.status_code)
             sys.exit("Ticker data not found when pulling filing_type: "
