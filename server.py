@@ -41,7 +41,7 @@ async def get_list_sec_tickers():
     df_tickers = pd.read_csv(TICKER_CIK_CSV_FPATH)
 
     list_tickers = df_tickers["ticker"].values
-    return list_tickers
+    return {"tickers": list_tickers}
 
 
 @app.get("/params/")
