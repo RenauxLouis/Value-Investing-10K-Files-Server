@@ -40,7 +40,7 @@ async def get_list_sec_tickers():
     update_ticker_cik_df()
     df_tickers = pd.read_csv(TICKER_CIK_CSV_FPATH)
 
-    list_tickers = list(df_tickers["ticker"].values)[:10]
+    list_tickers = ",".join(list(df_tickers["ticker"].values))#[:10]
     return {"tickers": list_tickers}
 
 
