@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from bs4 import BeautifulSoup
 
 from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, BASE_URL
 from download_10k_utils import (clean_excel,
