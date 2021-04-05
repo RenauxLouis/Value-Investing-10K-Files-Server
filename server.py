@@ -52,8 +52,12 @@ async def get_list_sec_tickers(ticker):
 
     soup = BeautifulSoup(data, features="lxml")
     tables = soup.find_all("td")
-    print([table.text for table in tables if table.text == "10-K"])
-    is_ticker_filing_10k = True
+
+    tables_10k = [table.text for table in tables if table.text == "10-K"]
+    if tables_10k:
+        is_ticker_filing_10k = True
+    else:
+        is_ticker_filing_10k = False
 
     return {"is_ticker_filing_10k": is_ticker_filing_10k}
 
