@@ -7,7 +7,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH
+from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, BASE_URL
 from download_10k_utils import (clean_excel,
                                 download_years_in_ticker_folder_from_s3,
                                 filter_s3_urls_to_send,
@@ -33,6 +33,28 @@ app.add_middleware(CORSMiddleware,
 
 sec_downloader = SECDownloader()
 
+
+@app.get("/list_sec_filing_10k/")
+async def get_list_sec_tickers(ticker):
+
+    cik = sec_downloader.get_ticker_cik(ticker)
+
+    params = {"action": "getcompany", "owner": "exclude",
+              "output": "html", "CIK": cik, "type": "10-K"}
+
+    with session.get(BASE_URL, params=params) as r:
+        if r.status_code != 200:
+            print(r.status_code)
+            sys.exit("Ticker data not found when pulling filing_type: "
+                     f"{filing_type}")
+        data = r.text
+
+    soup = BeautifulSoup(data, features="lxml")
+    tables = soup.find_all("td", {"class": "tableFile"})
+    print(tables)
+    is_ticker_filing_10k = true
+
+    return {"is_ticker_filing_10k": is_ticker_filing_10k}
 
 @app.get("/list_sec/")
 async def get_list_sec_tickers():
