@@ -123,13 +123,21 @@ def download(ticker, cik, years, ticker_folder):
     return excel_fpaths, fiscal_years_10k
 
 
-def http_download(url, params=None):
+def http_download(url, params=None, retries=3):
 
-    with session.get(url, params=params) as r:
-        if r.status_code != 200:
-            print(r.status_code)
-            sys.exit(f"Wrong status code {r.status_code} when querying {url}")
-        data = r.text
+    try:
+        with session.get(url, params=params) as r:
+            if r.status_code != 200:
+                print(r.status_code)
+                sys.exit(f"Wrong status code {r.status_code} when querying {url}")
+            data = r.text
+    except requests.exceptions.RetryError:
+        if retries:
+            sleep(2)
+            http_download(url, params=params, retries=retries-1)
+        else:
+            sys.exit(f"Exceeded max retries when querying {url}")
+
     return data
 
 
