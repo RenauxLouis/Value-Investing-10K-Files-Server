@@ -6,28 +6,23 @@ import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from bs4 import BeautifulSoup
 
-from constants import (SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, BASE_URL,
-                       TOTAL_RETRIES, STATUS_FORCELIST, BACKOFF_FACTOR)
-from download_10k_utils import (clean_excel,
-                                download_years_in_ticker_folder_from_s3,
-                                filter_s3_urls_to_send,
-                                get_existing_merged_fpaths, get_existing_years,
-                                get_fpaths_from_local_ticker,
-                                merge_excel_files_across_years, parse_inputs,
-                                upload_files_to_s3)
+from bs4 import BeautifulSoup
+from constants import (BACKOFF_FACTOR, BASE_URL, SEC_CIK_TXT_URL,
+                       STATUS_FORCELIST, TICKER_CIK_CSV_FPATH, TOTAL_RETRIES)
+from excel_parsing_utils.py import (clean_excel,
+                                    download_years_in_ticker_folder_from_s3,
+                                    filter_s3_urls_to_send,
+                                    get_existing_merged_fpaths,
+                                    get_existing_years,
+                                    get_fpaths_from_local_ticker,
+                                    merge_excel_files_across_years,
+                                    parse_inputs, upload_files_to_s3)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from sec_downloader import SECDownloader, download, update_ticker_cik_df
-
-session = requests.Session()
-retry = Retry(total=TOTAL_RETRIES, status_forcelist=STATUS_FORCELIST,
-              backoff_factor=BACKOFF_FACTOR)
-adapter = HTTPAdapter(max_retries=retry)
-session.mount("http://", adapter)
-session.mount("https://", adapter)
+from sec_downloader import (SECDownloader, download,
+                            update_ticker_cik_df, http_download)
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware,
@@ -45,12 +40,7 @@ async def get_list_sec_tickers(ticker):
     params = {"action": "getcompany", "owner": "exclude",
               "output": "html", "CIK": cik, "type": "10-K"}
 
-    with session.get(BASE_URL, params=params) as r:
-        if r.status_code != 200:
-            print(r.status_code)
-            sys.exit("Ticker data not found when pulling filing_type: "
-                     f"{filing_type}")
-        data = r.text
+    data = http_download(BASE_URL, params)
 
     soup = BeautifulSoup(data, features="lxml")
     tables = soup.find_all("td")
@@ -62,6 +52,7 @@ async def get_list_sec_tickers(ticker):
         is_ticker_filing_10k = False
 
     return {"is_ticker_filing_10k": is_ticker_filing_10k}
+
 
 @app.get("/list_sec/")
 async def get_list_sec_tickers():

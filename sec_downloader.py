@@ -7,10 +7,10 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 from bs4 import BeautifulSoup
-from constants import (_10K_FILING_TYPE, BASE_URL, HTM_EXT, MAP_SEC_PREFIX,
-                       PROXY_STATEMENT_FILING_TYPE, SEC_CIK_TXT_URL,
-                       TICKER_CIK_CSV_FPATH, XLSX_EXT, TOTAL_RETRIES,
-                       STATUS_FORCELIST, BACKOFF_FACTOR)
+from constants import (_10K_FILING_TYPE, BACKOFF_FACTOR, BASE_URL, HTM_EXT,
+                       MAP_SEC_PREFIX, PROXY_STATEMENT_FILING_TYPE,
+                       SEC_CIK_TXT_URL, STATUS_FORCELIST, TICKER_CIK_CSV_FPATH,
+                       TOTAL_RETRIES, XLSX_EXT)
 
 session = requests.Session()
 retry = Retry(total=TOTAL_RETRIES, status_forcelist=STATUS_FORCELIST,
@@ -123,6 +123,16 @@ def download(ticker, cik, years, ticker_folder):
     return excel_fpaths, fiscal_years_10k
 
 
+def http_download(url, params=None):
+
+    with session.get(url, params=params) as r:
+        if r.status_code != 200:
+            print(r.status_code)
+            sys.exit(f"Wrong status code {r.status_code} when querying {url}")
+        data = r.text
+    return data
+
+
 def get_folders_urls(filing_type, years, cik):
 
     last_year_param = str(int(years[-1]) + 1) + "1231"
@@ -131,13 +141,7 @@ def get_folders_urls(filing_type, years, cik):
               "output": "xml", "CIK": cik, "type": filing_type,
               "dateb": last_year_param}
 
-    with session.get(BASE_URL, params=params) as r:
-        if r.status_code != 200:
-            print(r.status_code)
-            sys.exit("Ticker data not found when pulling filing_type: "
-                     f"{filing_type}")
-
-        data = r.text
+    data = http_download(BASE_URL, params)
 
     soup = BeautifulSoup(data, features="lxml")
     urls = [link.string for link in soup.find_all("filinghref")]
@@ -153,12 +157,7 @@ def get_folders_urls(filing_type, years, cik):
 
 def get_fiscal_year(index_url):
 
-    with session.get(index_url) as r:
-        status_code = r.status_code
-        if status_code == 200:
-            data = r.text
-        else:
-            print("Error when request:", status_code)
+    data = http_download(index_url)
 
     soup = BeautifulSoup(data, features="lxml")
 
@@ -174,12 +173,7 @@ def get_fiscal_year(index_url):
 
 def get_file_url(index_url, filing_type):
 
-    with session.get(index_url) as r:
-        status_code = r.status_code
-        if status_code == 200:
-            data = r.text
-        else:
-            print("Error when request:", status_code)
+    data = http_download(index_url)
 
     soup = BeautifulSoup(data, features="lxml")
     tables = soup.find_all("table", {"class": "tableFile"})
