@@ -9,10 +9,12 @@ from requests.packages.urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from constants import (_10K_FILING_TYPE, BASE_URL, HTM_EXT, MAP_SEC_PREFIX,
                        PROXY_STATEMENT_FILING_TYPE, SEC_CIK_TXT_URL,
-                       TICKER_CIK_CSV_FPATH, XLSX_EXT)
+                       TICKER_CIK_CSV_FPATH, XLSX_EXT, TOTAL_RETRIES,
+                       STATUS_FORCELIST, BACKOFF_FACTOR)
 
 session = requests.Session()
-retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
+retry = Retry(total=TOTAL_RETRIES, status_forcelist=STATUS_FORCELIST,
+              backoff_factor=BACKOFF_FACTOR)
 adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)

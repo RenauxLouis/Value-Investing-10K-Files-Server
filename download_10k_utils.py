@@ -10,10 +10,12 @@ from pandas import ExcelWriter, merge, read_excel
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from constants import REGEX_PER_TARGET_SHEET, TICKERS_10K_S3_BUCKET
+from constants import (REGEX_PER_TARGET_SHEET, TICKERS_10K_S3_BUCKET,
+                       TOTAL_RETRIES, STATUS_FORCELIST, BACKOFF_FACTOR)
 
 session = requests.Session()
-retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
+retry = Retry(total=TOTAL_RETRIES, status_forcelist=STATUS_FORCELIST,
+              backoff_factor=BACKOFF_FACTOR)
 adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)

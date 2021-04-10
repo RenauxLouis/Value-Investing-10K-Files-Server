@@ -21,3 +21,6 @@ PROXY_STATEMENT_FILING_TYPE = "DEF 14A"
 TICKER_CIK_CSV_FPATH = "ticker_cik.csv"
 SEC_CIK_TXT_URL = "https://www.sec.gov/include/ticker.txt"
 TICKERS_10K_S3_BUCKET = "tickers-10k"
+TOTAL_RETRIES = 3
+STATUS_FORCELIST = [403]
+BACKOFF_FACTOR = 3

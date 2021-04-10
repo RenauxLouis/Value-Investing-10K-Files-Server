@@ -8,7 +8,8 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
-from constants import SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, BASE_URL
+from constants import (SEC_CIK_TXT_URL, TICKER_CIK_CSV_FPATH, BASE_URL,
+                       TOTAL_RETRIES, STATUS_FORCELIST, BACKOFF_FACTOR)
 from download_10k_utils import (clean_excel,
                                 download_years_in_ticker_folder_from_s3,
                                 filter_s3_urls_to_send,
@@ -22,7 +23,8 @@ from fastapi.responses import FileResponse
 from sec_downloader import SECDownloader, download, update_ticker_cik_df
 
 session = requests.Session()
-retry = Retry(total=3, status_forcelist=[403], backoff_factor=2)
+retry = Retry(total=TOTAL_RETRIES, status_forcelist=STATUS_FORCELIST,
+              backoff_factor=BACKOFF_FACTOR)
 adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
