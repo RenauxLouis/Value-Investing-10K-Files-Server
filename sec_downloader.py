@@ -76,6 +76,7 @@ def download(ticker, cik, years, ticker_folder):
             os.makedirs(year_folder, exist_ok=True)
 
             _10k_url = get_file_url(index_url, _10K_FILING_TYPE)
+            print(_10k_url)
 
             prefix = MAP_SEC_PREFIX[_10K_FILING_TYPE]
             download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
@@ -107,6 +108,7 @@ def download(ticker, cik, years, ticker_folder):
             os.makedirs(year_folder, exist_ok=True)
 
             proxy_url = get_file_url(index_url, PROXY_STATEMENT_FILING_TYPE)
+            print(proxy_url)
 
             prefix = MAP_SEC_PREFIX[PROXY_STATEMENT_FILING_TYPE]
             download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
