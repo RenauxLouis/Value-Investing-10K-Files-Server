@@ -10,14 +10,14 @@ from requests.packages.urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from constants import (BACKOFF_FACTOR, BASE_URL, SEC_CIK_TXT_URL,
                        STATUS_FORCELIST, TICKER_CIK_CSV_FPATH, TOTAL_RETRIES)
-from excel_parsing_utils.py import (clean_excel,
-                                    download_years_in_ticker_folder_from_s3,
-                                    filter_s3_urls_to_send,
-                                    get_existing_merged_fpaths,
-                                    get_existing_years,
-                                    get_fpaths_from_local_ticker,
-                                    merge_excel_files_across_years,
-                                    parse_inputs, upload_files_to_s3)
+from excel_parsing_utils import (clean_excel,
+                                 download_years_in_ticker_folder_from_s3,
+                                 filter_s3_urls_to_send,
+                                 get_existing_merged_fpaths,
+                                 get_existing_years,
+                                 get_fpaths_from_local_ticker,
+                                 merge_excel_files_across_years,
+                                 parse_inputs, upload_files_to_s3)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
