@@ -23,4 +23,4 @@ SEC_CIK_TXT_URL = "https://www.sec.gov/include/ticker.txt"
 TICKERS_10K_S3_BUCKET = "tickers-10k"
 TOTAL_RETRIES = 3
 STATUS_FORCELIST = [403]
-BACKOFF_FACTOR = 3
+BACKOFF_FACTOR = 5

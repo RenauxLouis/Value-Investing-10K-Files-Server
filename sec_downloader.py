@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import pandas as pd
 import requests
@@ -133,7 +134,7 @@ def http_download(url, params=None, retries=3):
             data = r.text
     except requests.exceptions.RetryError:
         if retries:
-            sleep(2)
+            time.sleep(2)
             http_download(url, params=params, retries=retries-1)
         else:
             sys.exit(f"Exceeded max retries when querying {url}")
