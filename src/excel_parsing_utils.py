@@ -13,6 +13,16 @@ from requests.packages.urllib3.util.retry import Retry
 from constants import (BACKOFF_FACTOR, REGEX_PER_TARGET_SHEET,
                        STATUS_FORCELIST, TICKERS_10K_S3_BUCKET, TOTAL_RETRIES)
 
+aws_access_key_id = os.environ["aws_access_key_id"]
+aws_secret_access_key = os.environ["aws_secret_access_key"]
+
+S3_CLIENT = boto3.client("s3",
+                         aws_access_key_id=aws_access_key_id,
+                         aws_secret_access_key=aws_secret_access_key)
+S3_RESOURCE = boto3.resource("s3",
+                             aws_access_key_id=aws_access_key_id,
+                             aws_secret_access_key=aws_secret_access_key)
+
 
 def merge_excel_files_across_years(ticker, ticker_folder):
 
@@ -308,14 +318,12 @@ def get_first_matching(titles, targets):
 
 def upload_files_to_s3(created_fpaths, existing_s3_urls, ticker, ticker_folder):
 
-    s3_client = boto3.client("s3")
-
     s3_urls = []
     for fpath in created_fpaths:
         s3_prefix = os.path.join(ticker, fpath.split(ticker_folder + "/")[1])
         s3_url = os.path.join("s3://", TICKERS_10K_S3_BUCKET, s3_prefix)
         if s3_url not in existing_s3_urls:
-            s3_client.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
+            S3_CLIENT.upload_file(fpath, TICKERS_10K_S3_BUCKET, s3_prefix)
 
         s3_urls.append(s3_url)
 
@@ -343,8 +351,7 @@ def parse_inputs(get10k, getProxyStatement, getBalanceSheet,
 
 def download_years_in_ticker_folder_from_s3(ticker, ticker_folder, years):
 
-    s3_resource = boto3.resource("s3")
-    bucket = s3_resource.Bucket(TICKERS_10K_S3_BUCKET)
+    bucket = S3_RESOURCE.Bucket(TICKERS_10K_S3_BUCKET)
     s3_objects = bucket.objects.filter(Prefix=ticker)
 
     existing_s3_urls = []

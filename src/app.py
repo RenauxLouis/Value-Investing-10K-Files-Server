@@ -25,6 +25,13 @@ from sec_downloader import (SECDownloader, download,
                             update_ticker_cik_df, http_download)
 
 app = FastAPI()
+
+
+@app.get("/")
+def home():
+    return {"message":"Health Check Passed!"}
+
+
 app.add_middleware(CORSMiddleware,
                    allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
