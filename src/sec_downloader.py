@@ -68,6 +68,7 @@ def download(ticker, cik, years, ticker_folder):
     excel_fpaths = []
     fiscal_years_10k = []
     print("Download 10K Forms")
+    print(_10k_urls)
     for index_url in _10k_urls:
 
         fiscal_year = get_fiscal_year(index_url)
@@ -101,6 +102,7 @@ def download(ticker, cik, years, ticker_folder):
         filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
     fiscal_years_proxy = []
     print("Download Proxy Statements")
+    print(proxy_statements_urls)
     for index_url in proxy_statements_urls:
 
         fiscal_year = get_fiscal_year(index_url)
@@ -125,6 +127,7 @@ def download(ticker, cik, years, ticker_folder):
 
 
 def http_download(url, params=None, retries=3):
+    print(url, params)
 
     try:
         with session.get(url, params=params) as r:
@@ -135,7 +138,7 @@ def http_download(url, params=None, retries=3):
     except requests.exceptions.RetryError:
         if retries:
             time.sleep(2)
-            http_download(url, params=params, retries=retries-1)
+            data = http_download(url, params=params, retries=retries-1)
         else:
             sys.exit(f"Exceeded max retries when querying {url}")
 
@@ -151,6 +154,7 @@ def get_folders_urls(filing_type, years, cik):
               "dateb": last_year_param}
 
     data = http_download(BASE_URL, params)
+    print("data", data)
 
     soup = BeautifulSoup(data, features="lxml")
     urls = [link.string for link in soup.find_all("filinghref")]

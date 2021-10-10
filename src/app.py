@@ -29,7 +29,7 @@ app = FastAPI()
 
 @app.get("/")
 def home():
-    return {"message":"Health Check Passed!"}
+    return {"message": "Health Check Passed!"}
 
 
 app.add_middleware(CORSMiddleware,
@@ -124,15 +124,20 @@ def create_missing_files(ticker, ticker_folder, cik, years):
     existing_years = get_existing_years(ticker_folder)
     missing_years = [year for year in years if year not in existing_years]
 
+    print("missing_years", missing_years)
+
     if missing_years:
         excel_fpaths_to_clean, created_years = download(
             ticker, cik, missing_years, ticker_folder)
+        print(excel_fpaths_to_clean, created_years)
         for excel_fpath in excel_fpaths_to_clean:
             clean_excel(excel_fpath)
     else:
         created_years = []
 
     local_years = existing_years + created_years
+
+    print("local_years", local_years)
 
     existing_merged_fpaths = get_existing_merged_fpaths(
         ticker, ticker_folder, local_years)
