@@ -4,6 +4,6 @@ This server's goal is to gather data following the principles in Value Investing
 
 Run 
 ```
-uvicorn server:app --host 0.0.0.0 --port 8080
+uvicorn app:app --host 0.0.0.0 --port 8080 --reload
 ```
 to start the server
