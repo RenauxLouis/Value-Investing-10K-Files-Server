@@ -27,16 +27,16 @@ from sec_downloader import (SECDownloader, download,
 app = FastAPI()
 
 
-@app.get("/")
-def home():
-    return {"message":"Health Check Passed!"}
-
-
 app.add_middleware(CORSMiddleware,
                    allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 
 sec_downloader = SECDownloader()
+
+
+@app.get("/")
+def home():
+    return {"message":"Health Check Passed!"}
 
 
 @app.get("/list_sec_filing_10k/")
@@ -100,7 +100,6 @@ def get_s3_urls_to_send_to_user(ticker, years, _10k, Proxy,
 
     raw_files_to_send, merged_files_to_send, years = parse_inputs(
         _10k, Proxy, Balance, Income, Cash, years)
-    print(raw_files_to_send, merged_files_to_send)
 
     cik = sec_downloader.get_ticker_cik(ticker)
 
