@@ -24,9 +24,9 @@ S3_RESOURCE = boto3.resource("s3",
                              aws_secret_access_key=aws_secret_access_key)
 
 
-def merge_excel_files_across_years(ticker, ticker_folder):
+def merge_excel_files_across_years(ticker, ticker_folder, local_years):
 
-    years = get_xslx_years(ticker_folder)
+    years = local_years
     if not years:
         return []
 
@@ -78,24 +78,7 @@ def merge_excel_files_across_years(ticker, ticker_folder):
             #create_merged_df(sheet_per_year, writer, dollar_format)
 
     return merged_fpaths
-
-
-def get_xslx_years(ticker_folder):
-    content = os.listdir(ticker_folder)
-    years = [item for item in content
-             if os.path.isdir(os.path.join(ticker_folder, item))]
-
-    xlsx_years = []
-    for year in years:
-        year_folder = os.path.join(ticker_folder, year)
-        year_folder_content = os.listdir(year_folder)
-        year_folder_content_fext = [os.path.splitext(item)[1]
-                                    for item in year_folder_content]
-        if ".xlsx" in year_folder_content_fext:
-            xlsx_years.append(year)
-
-    return xlsx_years
-
+    
 
 def get_sheets_per_year_per_target(excel_fpath_per_year):
 
