@@ -101,7 +101,6 @@ def download(ticker, cik, years, ticker_folder):
 
     excel_fpaths = []
     for _, row in df.iterrows():
-        print(row.url)
 
         year_folder = os.path.join(ticker_folder, row.year)
         os.makedirs(year_folder, exist_ok=True)
@@ -110,74 +109,12 @@ def download(ticker, cik, years, ticker_folder):
         ext = os.path.splitext(row.url)[1]
         fpath = os.path.join(
             year_folder, f"{ticker.upper()}_{prefix}_{row.year}{ext}")
-        print(fpath)
 
         if row.primaryDocument == "Financial_Report.xlsx":
             excel_fpath = download_file_from_url(row.url, fpath)
             excel_fpaths.append(excel_fpath)
         else:
             download_file_from_url(row.url, fpath)
-
-    print(excel_fpaths, fiscal_years_10k)
-    return excel_fpaths, fiscal_years_10k
-
-    _10k_urls = get_folders_urls(
-        filing_type=_10K_FILING_TYPE, years=years, cik=cik)
-    excel_fpaths = []
-    fiscal_years_10k = []
-    print("Download 10K Forms")
-    for index_url in _10k_urls:
-
-        fiscal_year = get_fiscal_year(index_url)
-
-        if fiscal_year in years:
-
-            fiscal_years_10k.append(fiscal_year)
-            year_folder = os.path.join(ticker_folder, fiscal_year)
-            os.makedirs(year_folder, exist_ok=True)
-
-            _10k_url = get_file_url(index_url, _10K_FILING_TYPE)
-            print(_10k_url)
-
-            prefix = MAP_SEC_PREFIX[_10K_FILING_TYPE]
-            download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
-                                   _10k_url, year_folder)
-
-            _10k_xslx_url = os.path.join(
-                os.path.dirname(index_url), "Financial_Report.xlsx")
-            excel_fpath = download_file_from_url(prefix, fiscal_year,
-                                                 XLSX_EXT, ticker,
-                                                 _10k_xslx_url, year_folder)
-            if excel_fpath:
-                excel_fpaths.append(excel_fpath)
-
-        # Files from all requested years have been downloaded
-        if set(fiscal_years_10k) == set(years):
-            break
-
-    # proxy_statements_urls = get_folders_urls(
-    #     filing_type=PROXY_STATEMENT_FILING_TYPE, years=years, cik=cik)
-    # fiscal_years_proxy = []
-    # print("Download Proxy Statements")
-    # for index_url in proxy_statements_urls:
-
-    #     fiscal_year = get_fiscal_year(index_url)
-
-    #     if fiscal_year in years:
-    #         fiscal_years_proxy.append(fiscal_year)
-    #         year_folder = os.path.join(ticker_folder, fiscal_year)
-    #         os.makedirs(year_folder, exist_ok=True)
-
-    #         proxy_url = get_file_url(index_url, PROXY_STATEMENT_FILING_TYPE)
-    #         print(proxy_url)
-
-    #         prefix = MAP_SEC_PREFIX[PROXY_STATEMENT_FILING_TYPE]
-    #         download_file_from_url(prefix, fiscal_year, HTM_EXT, ticker,
-    #                                proxy_url, year_folder)
-
-    #     # Files from all requested years have been downloaded
-    #     if set(fiscal_years_proxy) == set(years):
-    #         break
 
     return excel_fpaths, fiscal_years_10k
 

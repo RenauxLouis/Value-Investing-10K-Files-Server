@@ -245,7 +245,6 @@ def get_fpaths_from_local_ticker(ticker_folder, years):
 
 
 def get_existing_merged_fpaths(ticker, ticker_folder, years):
-    print(ticker, ticker_folder, years)
 
     merged_fnames_map = get_merged_fnames_map(ticker, years)
     merged_fpaths = [os.path.join(ticker_folder, fname)

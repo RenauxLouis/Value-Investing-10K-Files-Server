@@ -27,9 +27,9 @@ from sec_downloader import (SECDownloader, download,
 app = FastAPI()
 
 
-# app.add_middleware(CORSMiddleware,
-#                    allow_origins=["*"], allow_credentials=True,
-#                    allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware,
+                   allow_origins=["*"], allow_credentials=True,
+                   allow_methods=["*"], allow_headers=["*"])
 
 sec_downloader = SECDownloader()
 
@@ -74,7 +74,6 @@ async def get_list_sec_tickers():
 
 @app.get("/params/")
 async def download_10k(ticker, years, _10k, Proxy, Balance, Income, Cash):
-    print(ticker, years, _10k, Proxy, Balance, Income, Cash)
 
     with TemporaryDirectory() as dirpath:
         s3_urls_to_send_to_user, _ = get_s3_urls_to_send_to_user(
@@ -132,9 +131,7 @@ def create_missing_files(ticker, ticker_folder, cik, years):
     else:
         created_years = []
 
-    print(existing_years, created_years)
     local_years = existing_years + created_years
-    print(local_years)
 
     existing_merged_fpaths = get_existing_merged_fpaths(
         ticker, ticker_folder, local_years)
