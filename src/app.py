@@ -138,7 +138,7 @@ def create_missing_files(ticker, ticker_folder, cik, years):
     if len(existing_merged_fpaths) == 3:
         merged_fpaths = existing_merged_fpaths
     else:
-        merged_fpaths = merge_excel_files_across_years(ticker, ticker_folder)
+        merged_fpaths = merge_excel_files_across_years(ticker, ticker_folder, local_years)
 
     raw_fpaths = get_fpaths_from_local_ticker(ticker_folder, local_years)
     created_fpath = raw_fpaths + merged_fpaths
